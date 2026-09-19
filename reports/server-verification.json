@@ -1,0 +1,35 @@
+[
+  {
+    "version": 126,
+    "source": "http://114.132.94.163/appupdate/hw501_update_v126.tar",
+    "size": 3840000,
+    "sha256": "05cb3d1e6a2e18814fcedd1f2b981c29cedf271af3a8814e2810aa8ac773041d",
+    "matches_original_server": true
+  },
+  {
+    "version": 127,
+    "source": "http://114.132.94.163/appupdate/hw501_update_v127.tar",
+    "error": "HTTP Error 403: Forbidden",
+    "api": {
+      "result": 0,
+      "version": 127,
+      "pos": 0,
+      "itemsize": 32768,
+      "errstr": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v127.tar"
+    }
+  },
+  {
+    "version": 128,
+    "source": "http://114.132.94.163/appupdate/hw501_update_v128.tar",
+    "size": 4341760,
+    "sha256": "7b761ff653abd6d2f325dd921a2d1f47b173b66a0dcd54ca869840f1faf08206",
+    "matches_original_server": true
+  },
+  {
+    "version": 131,
+    "source": "http://114.132.94.163/appupdate/hw501_update_v131.tar",
+    "size": 4485120,
+    "sha256": "bbf89a7aaa399297609d1543fd0c977c6848c6284ecaa53e0fb4482af6a86466",
+    "matches_original_server": true
+  }
+]

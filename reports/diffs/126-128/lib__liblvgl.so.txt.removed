@@ -1,0 +1,218 @@
+!Can't open file: path is NULL
+"""""""""""
+""""""*
+$DDDDDDD 
+$DDDDDDDDDDDDDB
+$DDDDDDDDDDDDDDDC
+$DDDDDDDDDDDDDDDDC
+',}~v!a
+'0' <= c && c <= '9'
+(LAh_<z
+(qrcodegen_VERSION_MIN * 4 + 17) <= result && result <= (qrcodegen_VERSION_MAX * 4 + 17)
+/workspace/CarLifeProxy_Linux/lvgl-8.3.1/src/extra/layouts/grid/lv_grid.c
+/workspace/CarLifeProxy_Linux/lvgl-8.3.1/src/extra/libs/qrcode/lv_qrcode.c
+/workspace/CarLifeProxy_Linux/lvgl-8.3.1/src/extra/libs/qrcode/qrcodegen.c
+/workspace/CarLifeProxy_Linux/lvgl-8.3.1/src/hal/../draw/../misc/lv_color.h
+/workspace/CarLifeProxy_Linux/lvgl-8.3.1/src/widgets/lv_canvas.c
+0 <= (int)ecl && (int)ecl < 4 && qrcodegen_VERSION_MIN <= version && version <= qrcodegen_VERSION_MAX
+0 <= (int)ecl && (int)ecl <= 3 && -1 <= (int)mask && (int)mask <= 7
+0 <= (int)mask && (int)mask <= 7
+0 <= bitLength && bitLength <= INT16_MAX
+0 <= ccbits && ccbits <= 16
+0 <= e && e < 4
+0 <= numBits && numBits <= 16 && (unsigned long)val >> numBits == 0
+0 <= numChars && numChars <= INT16_MAX
+0 <= result && result <= INT16_MAX
+0 <= temp && temp <= INT16_MAX
+1 <= degree && degree <= qrcodegen_REED_SOLOMON_DEGREE_MAX
+21 <= qrsize && qrsize <= 177 && 0 <= x && x < qrsize && 0 <= y && y < qrsize
+333331
+333331/
+3333330o
+3333333
+3333333333333333 
+4DDDDDDDC
+4DDDDDDDDDDDB
+<X,m_4
+@&Daag
+@*DIag
+@.Diag
+@fD%ag
+@nD-ag
+Couldn't allocate a new layer context
+D+;V3Zc
+DDDDDDDD
+DDDDDDDDC
+DDDDDDDDD0
+DDDDDDDDDDC
+DDDDDDDDDDDD 
+DDDDDDDDDDDDDDD_
+DDDDDDDDo
+DDDDDDDM
+Faild to allcoate item for teh gradient
+Fffffffffd
+Gwwwww
+Gwwwwwwwwwwwws
+Gwwwwwwwwwwwwt
+Invalid palette: %d
+It's a big endian system but LV_BIG_ENDIAN_SYSTEM is not enabled in lv_conf.h
+LRU Cache unable to create cache object
+LV_BIG_ENDIAN_SYSTEM == 1
+LV_LAYOUT_GRID
+LV_STYLE_GRID_CELL_COLUMN_POS
+LV_STYLE_GRID_CELL_COLUMN_SPAN
+LV_STYLE_GRID_CELL_ROW_POS
+LV_STYLE_GRID_CELL_ROW_SPAN
+LV_STYLE_GRID_CELL_X_ALIGN
+LV_STYLE_GRID_CELL_Y_ALIGN
+LV_STYLE_GRID_COLUMN_ALIGN
+LV_STYLE_GRID_COLUMN_DSC_ARRAY
+LV_STYLE_GRID_ROW_ALIGN
+LV_STYLE_GRID_ROW_DSC_ARRAY
+M,q%CQ
+O@4!Os
+P"TEag
+P&Teag
+P*TMag
+P.Tmag
+PbT!ag
+TBY!ag
+TDDDDDDD
+The strings have no UTF-8 encoding. Non-ASCII characters won't be displayed.
+UUUUUUUUU
+UUUUUUU[
+UUUUUUV
+Unexpected end angle
+Unexpected start angle
+Vffffg
+Wwwwwww`
+YjZiag
+__assert_fail
+aDDDDDDDDDDD0
+addEccAndInterleave
+appendBitsToBuffer
+applyMask
+bitLen != -1
+bitLen % 8 == 0
+bitLen <= dataCapacityBits
+bitLen == dataUsedBits
+bits >> 15 == 0
+bits >> 18 == 0
+cache != NULL
+calcReedSolomonGenerator
+calcReedSolomonRemainder
+calcSegmentBitLength
+data != NULL || len == 0
+dataUsedBits != -1
+data_tmp != NULL
+digits != NULL
+drawCodewords
+drawFormatBits
+drawWhiteFunctionModules
+end_angle >= 0 && start_angle <= 360
+fWFg@P
+fffffffffffff 
+getModule
+getNumDataCodewords
+getNumRawDataModules
+getTotalBits
+grid_update
+gwwwwwwwwwwwwwt
+i == dataLen * 8
+init_fake_disp
+j-;e)<
+k>;kEe
+lv_canvas_blur_hor
+lv_canvas_blur_ver
+lv_canvas_class
+lv_canvas_copy_buf
+lv_canvas_copy_buf: x or y out of the canvas
+lv_canvas_create
+lv_canvas_draw_arc
+lv_canvas_draw_arc: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_draw_img
+lv_canvas_draw_img: Couldn't get the image data.
+lv_canvas_draw_img: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_draw_line
+lv_canvas_draw_line: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_draw_polygon
+lv_canvas_draw_polygon: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_draw_rect
+lv_canvas_draw_rect: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_draw_text
+lv_canvas_draw_text: can't draw to LV_IMG_CF_INDEXED canvas
+lv_canvas_fill_bg
+lv_canvas_get_img
+lv_canvas_get_px
+lv_canvas_set_buffer
+lv_canvas_set_palette
+lv_canvas_set_px_color
+lv_canvas_set_px_opa
+lv_canvas_transform
+lv_color_mix_with_alpha
+lv_font_montserrat_28
+lv_font_montserrat_32
+lv_font_montserrat_34
+lv_grid_init
+lv_img_decoder_init: out of memory
+lv_img_decoder_open: out of memory
+lv_img_src_get_type: unknown image type
+lv_obj_set_grid_align
+lv_obj_set_grid_cell
+lv_obj_set_grid_dsc_array
+lv_obj_set_style_grid_cell_column_pos
+lv_obj_set_style_grid_cell_column_span
+lv_obj_set_style_grid_cell_row_pos
+lv_obj_set_style_grid_cell_row_span
+lv_obj_set_style_grid_cell_x_align
+lv_obj_set_style_grid_cell_y_align
+lv_obj_set_style_grid_column_align
+lv_obj_set_style_grid_column_dsc_array
+lv_obj_set_style_grid_row_align
+lv_obj_set_style_grid_row_dsc_array
+lv_qrcode_class
+lv_qrcode_constructor
+lv_qrcode_create
+lv_qrcode_delete
+lv_qrcode_update
+lv_spinner_class
+lv_spinner_create
+lv_style_set_grid_cell_column_pos
+lv_style_set_grid_cell_column_span
+lv_style_set_grid_cell_row_pos
+lv_style_set_grid_cell_row_span
+lv_style_set_grid_cell_x_align
+lv_style_set_grid_cell_y_align
+lv_style_set_grid_column_align
+lv_style_set_grid_column_dsc_array
+lv_style_set_grid_row_align
+lv_style_set_grid_row_dsc_array
+mNG}QC}>L+
+no display registered
+numCharCountBits
+qr0 != NULL
+qrcode != NULL
+qrcodegen_VERSION_MIN <= minVersion && minVersion <= maxVersion && maxVersion <= qrcodegen_VERSION_MAX
+qrcodegen_VERSION_MIN <= ver && ver <= qrcodegen_VERSION_MAX
+qrcodegen_VERSION_MIN <= version && version <= qrcodegen_VERSION_MAX
+res_opa_saved != 0
+result >= 0
+result.bitLength != -1
+result.bitLength == bitLen
+segs != NULL || len == 0
+setModule
+src_img != NULL
+start_angle >= 0 && start_angle <= 360
+tDDDDDDDDDDDG
+temp != NULL
+to_copy != NULL
+tr != NULL
+wwwwv0
+wwwwwP
+wwwwwQ
+wwwwwq
+wwwwwt
+wwwwwwwwwa
+wwwwwwwwwwwwy
+wwwwww~
+|&."y%D

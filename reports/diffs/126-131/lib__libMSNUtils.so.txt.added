@@ -1,0 +1,16 @@
+%m-%d %H:%M:%S
+.%03ld
+LINKSDK_DEBUG_LEVEL
+LINKSDK_DEBUG_TIMESTAMP_TYPE
+[%s] [%d] [%ld] %s [%s] 
+_Z4MLOGPKcS0_S0_PPv
+_ZN7MString10toHexBytesEPKciPhi
+_ZN8MRunLoop10startTimerEP7MNotifyji
+_ZN8MRunLoop15addIOReadNotifyEi7MIOTypeP7MNotifyi
+getenv
+localtime
+mlog_get_debug_level
+mlog_get_timestamp_type
+mlog_set_debug_level
+mlog_set_timestamp_type
+strftime

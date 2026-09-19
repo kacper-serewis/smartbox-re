@@ -1,0 +1,185 @@
+ (permissions insuffisantes)
+ (peut-
+ > /tmp/logs/bt.log
+ B14LVWinMainSteps
+ QK[X%
+ cause d
+ occup
+"Z!ao0
+# $A7$
+# $A7)
+# D9#"
+#$A%#"Q%#.
+#(!%# a%*
+%DF}Yc
+%s ProxyPairingSessionExchange err:%d outPtr:0x%p len:%d done:%d
+%s status:%d %d
+,,&[d7
+.#(!/#&1/#$A/#"Q/# a/#.q-#,
+/dev/ttyS1
+/dev/ttyS2
+/etc/bluetooth/bt.conf
+/etc/gk7021boxtest_flag
+/etc/gk7201boxtest_flag
+/komod/cdc_ncm.ko
+/mnt/UDISK/debug_flag
+/mnt/app/imgs/driversync_logo.png
+/mnt/app/imgs/steps4_1.png
+/mnt/app/imgs/steps4_2.png
+/mnt/app/imgs/steps4_3.png
+/mnt/app/imgs/steps4_jt.png
+2026081801
+25062601.D37P
+26012218.1129.1
+5ao0Q.
+?12LVWinCarPlay
+?15LVWinCarPlay_GK
+?15LVWinMainSteps4
+@"DmUA
+@$vVhP2
+@+FErF
+@-#(4G
+@6"GhDc
+@a2DBI
+@yHH"D
+Access denied (insufficient permissions)
+Allgemeiner Fehler
+Andere fout
+Apparaat bestaat niet (verbinding met apparaat verbroken?)
+Apparaat of hulpbron is bezig
+Appel syst
+Autre erreur
+Az eszk
+BT Device:
+Be-/kimeneti hiba
+Bewerking verlopen
+Bewerking wordt niet ondersteund
+Die Operation wird nicht unterst
+Die Ressource ist belegt
+Die Wartezeit f
+DriveSync
+EeaoPQ
+Eingabe-/Ausgabefehler
+Enable Bluetooth and Wi-Fi on you phone.
+Entity not found
+Erfolgreich
+Erreur d'entr
+Erreur de pipe
+FrFhH2
+G#&$acX 
+GD[R' [d
+Gebroken pijp
+Gelukt
+Input/Output Error
+Insert it into the car's data port and wait for the Bluetooth device name to be displayed.
+Insufficient memory
+Invalid parameter
+Invoer-/uitvoerfout
+JRVhT2
+Kein passendes Ger
+Keine Berechtigung (Zugriffsrechte fehlen)
+Mehr Daten empfangen als erwartet
+Nem tal
+Nicht gen
+Niet gevonden
+Nincs el
+No such device (it may have been disconnected)
+Onderbroken systeemaanroep
+Ongeldig argument
+Onvoldoende geheugen beschikbaar
+Operation expir
+Operation not supported or unimplemented on this platform
+Operation timed out
+Other error
+Overflow
+PROXY_AP_USE_WIFI4
+PROXY_CONN_LOGO_IMG
+PROXY_DEVICE_AP_PSK
+PROXY_TIPS_BKIMG
+PROXY_USE_CHIPID_TO_BTADDRESS
+PROXY_VERSION_POS
+Pair with the Bluetooth device:
+Pipe error
+Pro Tip:It works ONLY with cars that support Wired CarPlay/Android Auto.
+Proxy Update AirPlay Bonjor Event: Features:0x%llx CtrlConnect:%d supportPairSetup:%d pi:%s carModel:%s
+Proxy session type:%d host:%s port:%d
+Rendszerh
+Resource busy
+Resource d
+SPI_LED_SPEED_HZ
+SW ver: 
+Sikeres
+Start carplay proxy session clientConnState:%d ctrlConnState:%d hasStartSessionFeature:%d
+System call interrupted (perhaps due to signal)
+Toegang geweigerd (onvoldoende toegangsrechten)
+Unterbrechung w
+V1.2.3
+Waarde is te groot
+][Pu/)F
+_AirplayClientSendCmdPairVerify
+_UpdateProxyNetInterfaceStatus
+_ZN8HTimerEx8isActiveEv
+_ZTV15LVWinMainSteps4
+__ctype_tolower_loc
+`#(!a#&1a#$Aa#"Qa# aa#.q_#,
+bergabe unterbrochen (broken pipe)
+blueware /etc/bluetooth/blueware.properties %s &
+blueware /etc/bluetooth/blueware.properties -a %s %s &
+bordement
+cat /etc/modsig
+check system code failed
+dispatch_get_context
+e or non impl
+e sur cette plateforme
+e/sortie
+fWhPvVc
+ff&?333?
+gen bt address:%s
+gend Hauptspeicher verf
+get ap psk:%s
+hrend des Betriebssystemaufrufs
+ifconfig usb0 down
+insmod /komod/cdc_ncm.ko
+lcsordul
+libusb init failed, err:%d name:%s strerr:%s
+ln -s /dev/ttyS2 /dev/ttyS1
+ltiger Parameter
+lv_label_get_text
+lv_obj_set_style_bg_dither_mode
+lv_obj_set_style_text_align
+md5sum /komod/xm_osal.ko|cut -d ' ' -f 1
+md5sum /komod/xm_sys.ko|cut -d ' ' -f 1
+md5sum /komod/xm_sysconfig.ko|cut -d ' ' -f 1
+me abandonn
+ment introuvable
+mogatott ezen a rendszeren
+moire insuffisante
+nnte entfernt worden sein)
+nos hiba
+nytelen param
+o#.D'S
+o`Q3&T
+r die Operation ist abgelaufen
+ration non support
+recv carplay client connected
+recv link video started
+rique introuvable (peut-
+rmmod cdc_ncm
+s foglalt
+s megszak
+s megtagadva
+s refus
+setCarPlayTransforModeStatesEnable
+start bt cmd:%s
+t gefunden (es k
+t nicht gefunden
+tre invalide
+tt adatcsatorna
+tzt oder ist auf dieser Platform nicht implementiert
+u?33s?
+un signal)
+velet nem t
+vrV(T2
+xOZ)|Z
+xzound_logo.png
+z nem tal

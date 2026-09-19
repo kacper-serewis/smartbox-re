@@ -1,0 +1,785 @@
+[
+  {
+    "version": 1,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v1.tar"
+  },
+  {
+    "version": 2,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v2.tar"
+  },
+  {
+    "version": 3,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v3.tar"
+  },
+  {
+    "version": 4,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v4.tar"
+  },
+  {
+    "version": 5,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v5.tar"
+  },
+  {
+    "version": 6,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v6.tar"
+  },
+  {
+    "version": 7,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v7.tar"
+  },
+  {
+    "version": 8,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v8.tar"
+  },
+  {
+    "version": 9,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v9.tar"
+  },
+  {
+    "version": 10,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v10.tar"
+  },
+  {
+    "version": 11,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v11.tar"
+  },
+  {
+    "version": 12,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v12.tar"
+  },
+  {
+    "version": 13,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v13.tar"
+  },
+  {
+    "version": 14,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v14.tar"
+  },
+  {
+    "version": 15,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v15.tar"
+  },
+  {
+    "version": 16,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v16.tar"
+  },
+  {
+    "version": 17,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v17.tar"
+  },
+  {
+    "version": 18,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v18.tar"
+  },
+  {
+    "version": 19,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v19.tar"
+  },
+  {
+    "version": 20,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v20.tar"
+  },
+  {
+    "version": 21,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v21.tar"
+  },
+  {
+    "version": 22,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v22.tar"
+  },
+  {
+    "version": 23,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v23.tar"
+  },
+  {
+    "version": 24,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v24.tar"
+  },
+  {
+    "version": 25,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v25.tar"
+  },
+  {
+    "version": 26,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v26.tar"
+  },
+  {
+    "version": 27,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v27.tar"
+  },
+  {
+    "version": 28,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v28.tar"
+  },
+  {
+    "version": 29,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v29.tar"
+  },
+  {
+    "version": 30,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v30.tar"
+  },
+  {
+    "version": 31,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v31.tar"
+  },
+  {
+    "version": 32,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v32.tar"
+  },
+  {
+    "version": 33,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v33.tar"
+  },
+  {
+    "version": 34,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v34.tar"
+  },
+  {
+    "version": 35,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v35.tar"
+  },
+  {
+    "version": 36,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v36.tar"
+  },
+  {
+    "version": 37,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v37.tar"
+  },
+  {
+    "version": 38,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v38.tar"
+  },
+  {
+    "version": 39,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v39.tar"
+  },
+  {
+    "version": 40,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v40.tar"
+  },
+  {
+    "version": 41,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v41.tar"
+  },
+  {
+    "version": 42,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v42.tar"
+  },
+  {
+    "version": 43,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v43.tar"
+  },
+  {
+    "version": 44,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v44.tar"
+  },
+  {
+    "version": 45,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v45.tar"
+  },
+  {
+    "version": 46,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v46.tar"
+  },
+  {
+    "version": 47,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v47.tar"
+  },
+  {
+    "version": 48,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v48.tar"
+  },
+  {
+    "version": 49,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v49.tar"
+  },
+  {
+    "version": 50,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v50.tar"
+  },
+  {
+    "version": 51,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v51.tar"
+  },
+  {
+    "version": 52,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v52.tar"
+  },
+  {
+    "version": 53,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v53.tar"
+  },
+  {
+    "version": 54,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v54.tar"
+  },
+  {
+    "version": 55,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v55.tar"
+  },
+  {
+    "version": 56,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v56.tar"
+  },
+  {
+    "version": 57,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v57.tar"
+  },
+  {
+    "version": 58,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v58.tar"
+  },
+  {
+    "version": 59,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v59.tar"
+  },
+  {
+    "version": 60,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v60.tar"
+  },
+  {
+    "version": 61,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v61.tar"
+  },
+  {
+    "version": 62,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v62.tar"
+  },
+  {
+    "version": 63,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v63.tar"
+  },
+  {
+    "version": 64,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v64.tar"
+  },
+  {
+    "version": 65,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v65.tar"
+  },
+  {
+    "version": 66,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v66.tar"
+  },
+  {
+    "version": 67,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v67.tar"
+  },
+  {
+    "version": 68,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v68.tar"
+  },
+  {
+    "version": 69,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v69.tar"
+  },
+  {
+    "version": 70,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v70.tar"
+  },
+  {
+    "version": 71,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v71.tar"
+  },
+  {
+    "version": 72,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v72.tar"
+  },
+  {
+    "version": 73,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v73.tar"
+  },
+  {
+    "version": 74,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v74.tar"
+  },
+  {
+    "version": 75,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v75.tar"
+  },
+  {
+    "version": 76,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v76.tar"
+  },
+  {
+    "version": 77,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v77.tar"
+  },
+  {
+    "version": 78,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v78.tar"
+  },
+  {
+    "version": 79,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v79.tar"
+  },
+  {
+    "version": 80,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v80.tar"
+  },
+  {
+    "version": 81,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v81.tar"
+  },
+  {
+    "version": 82,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v82.tar"
+  },
+  {
+    "version": 83,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v83.tar"
+  },
+  {
+    "version": 84,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v84.tar"
+  },
+  {
+    "version": 85,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v85.tar"
+  },
+  {
+    "version": 86,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v86.tar"
+  },
+  {
+    "version": 87,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v87.tar"
+  },
+  {
+    "version": 88,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v88.tar"
+  },
+  {
+    "version": 89,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v89.tar"
+  },
+  {
+    "version": 90,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v90.tar"
+  },
+  {
+    "version": 91,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v91.tar"
+  },
+  {
+    "version": 92,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v92.tar"
+  },
+  {
+    "version": 93,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v93.tar"
+  },
+  {
+    "version": 94,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v94.tar"
+  },
+  {
+    "version": 95,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v95.tar"
+  },
+  {
+    "version": 96,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v96.tar"
+  },
+  {
+    "version": 97,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v97.tar"
+  },
+  {
+    "version": 98,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v98.tar"
+  },
+  {
+    "version": 99,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v99.tar"
+  },
+  {
+    "version": 100,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v100.tar"
+  },
+  {
+    "version": 101,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v101.tar"
+  },
+  {
+    "version": 102,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v102.tar"
+  },
+  {
+    "version": 103,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v103.tar"
+  },
+  {
+    "version": 104,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v104.tar"
+  },
+  {
+    "version": 105,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v105.tar"
+  },
+  {
+    "version": 106,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v106.tar"
+  },
+  {
+    "version": 107,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v107.tar"
+  },
+  {
+    "version": 108,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v108.tar"
+  },
+  {
+    "version": 109,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v109.tar"
+  },
+  {
+    "version": 110,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v110.tar"
+  },
+  {
+    "version": 111,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v111.tar"
+  },
+  {
+    "version": 112,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v112.tar"
+  },
+  {
+    "version": 113,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v113.tar"
+  },
+  {
+    "version": 114,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v114.tar"
+  },
+  {
+    "version": 115,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v115.tar"
+  },
+  {
+    "version": 116,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v116.tar"
+  },
+  {
+    "version": 117,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v117.tar"
+  },
+  {
+    "version": 118,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v118.tar"
+  },
+  {
+    "version": 119,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v119.tar"
+  },
+  {
+    "version": 120,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v120.tar"
+  },
+  {
+    "version": 121,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v121.tar"
+  },
+  {
+    "version": 122,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v122.tar"
+  },
+  {
+    "version": 123,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v123.tar"
+  },
+  {
+    "version": 124,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v124.tar"
+  },
+  {
+    "version": 125,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v125.tar"
+  },
+  {
+    "version": 126,
+    "http_status": 200,
+    "bytes": "3840000"
+  },
+  {
+    "version": 127,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v127.tar"
+  },
+  {
+    "version": 128,
+    "http_status": 200,
+    "bytes": "4341760"
+  },
+  {
+    "version": 129,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v129.tar"
+  },
+  {
+    "version": 130,
+    "http_status": 403,
+    "api_available": false,
+    "api_error": "update file not found:/www/wwwroot/boxupdate/appupdate/hw501_update_v130.tar"
+  },
+  {
+    "version": 131,
+    "http_status": 200,
+    "bytes": "4485120"
+  }
+]

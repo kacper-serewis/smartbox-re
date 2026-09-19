@@ -1,0 +1,155 @@
+'sv]U&
+(#*!)#(1)#&A)#$Q)#"a)# q)#.
+0#"!1# 11#.A/#,Q/#*a/#(q/#&
+000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F202122232425262728292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9FA0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBFC0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDFE0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF                \b\t\n  \f\r                                        \"                        \/                                                                                        \\                                                                                                                                                                                                                                                                                                                                      
+00010203040506070809101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899
+2#"!3# 13#.A1#,Q1#*a1#(q1#&
+7Cxl2i5n
+8>G#g$
+:#*!;#(1;#&A;#$Q;#"a;# q;#.
+<#"!=# 1=#.A;#,Q;#*a;#(q;#&
+?/"=~Fr
+@.Diag
+GCC_3.4
+GCC_4.2.0
+Infinity
+JSON patch operation is not object
+JSON pointer cannot be resolved
+L|]C5;
+UTF-16 encoding is not supported
+UTF-32 encoding is not supported
+ZI`h#`
+[%.3f] [%d] [%ld] %s [%s] 
+_R?Z}5
+__clzdi2
+__ctzdi2
+__floatundidf
+_p&&<Y.
+byte order mark (BOM) is not supported
+cannot set root
+d#*!e#(1e#&Ae#$Qe#"ae# qe#.
+fail to alloc memory
+failed to add `path`
+failed to copy value
+failed to create value
+failed to get `from`
+failed to get `path`
+failed to remove `from`
+failed to remove `path`
+failed to replace `path`
+failed to test equal
+file closing failed
+file opening failed
+file reading failed
+file writing failed
+g&yR?V
+getLogTimeStamp
+ih0sUr
+infinity
+input JSON is NULL
+input data is NULL
+input data is empty
+input file is NULL
+input fp is invalid
+input length is 0
+input parameter is NULL
+input patch is not array
+input path is NULL
+input path is invalid
+invalid JSON value type
+invalid UTF-8 encoding in string
+invalid escaped character
+invalid escaped character in string
+invalid escaped sequence in string
+invalid high surrogate in string
+invalid literal, expected a valid literal such as 'false'
+invalid literal, expected a valid literal such as 'null'
+invalid literal, expected a valid literal such as 'true'
+invalid low surrogate in string
+invalid member `from`
+invalid member `op`
+invalid member `path`
+invalid utf-8 encoding in string
+memory allocation failed
+missing key `from`
+missing key `op`
+missing key `path`
+missing key `value`
+mlog_file_fd
+mlog_file_maxsize
+mlog_mutex
+mlog_pfile
+nan or inf number is not allowed
+no digit after decimal point
+no digit after exponent sign
+no digit after minus sign
+no low surrogate in string
+no prefix '/'
+number is infinity when parsed as double
+number with leading zero is not allowed
+o Q{o Ap
+o0BWo`@z
+opQMop
+output value is NULL
+replace
+success
+trailing comma is not allowed
+unclosed multiline comment
+unclosed string
+unexpected character, expected a colon after object key
+unexpected character, expected a comma or a closing brace
+unexpected character, expected a comma or a closing bracket
+unexpected character, expected a string for object key
+unexpected character, expected a valid JSON value
+unexpected character, expected a valid root value
+unexpected content after document
+unexpected control character in string
+unexpected end of data
+unsafe_yyjson_equals
+unsafe_yyjson_mut_equals
+unsafe_yyjson_mut_ptr_getx
+unsafe_yyjson_mut_ptr_putx
+unsafe_yyjson_mut_ptr_removex
+unsafe_yyjson_mut_ptr_replacex
+unsafe_yyjson_ptr_getx
+unsafe_yyjson_str_pool_grow
+unsafe_yyjson_val_pool_grow
+unsupported `op`
+wqBv/?
+x#"!y# 1y#.Aw#,Qw#*aw#(qw#&
+yyjson_alc_dyn_free
+yyjson_alc_dyn_new
+yyjson_alc_pool_init
+yyjson_doc_mut_copy
+yyjson_locate_pos
+yyjson_merge_patch
+yyjson_mut_doc_free
+yyjson_mut_doc_imut_copy
+yyjson_mut_doc_mut_copy
+yyjson_mut_doc_new
+yyjson_mut_doc_set_str_pool_size
+yyjson_mut_doc_set_val_pool_size
+yyjson_mut_merge_patch
+yyjson_mut_patch
+yyjson_mut_val_imut_copy
+yyjson_mut_val_mut_copy
+yyjson_mut_val_write_file
+yyjson_mut_val_write_fp
+yyjson_mut_val_write_opts
+yyjson_mut_write_file
+yyjson_mut_write_fp
+yyjson_mut_write_opts
+yyjson_patch
+yyjson_read_file
+yyjson_read_fp
+yyjson_read_number
+yyjson_read_opts
+yyjson_val_mut_copy
+yyjson_val_write_file
+yyjson_val_write_fp
+yyjson_val_write_opts
+yyjson_version
+yyjson_write_file
+yyjson_write_fp
+yyjson_write_opts
+{[o>Z[

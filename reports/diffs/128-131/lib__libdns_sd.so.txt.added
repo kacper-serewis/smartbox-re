@@ -1,0 +1,107 @@
+<INVALID ERROR CODE>
+@&Daag
+@(#) libdns_sd (Aug  9 2026 11:40:11)
+@.Diag
+@fD%ag
+AlreadyRegistered
+BadFlags
+BadInterfaceIndex
+BadKey
+BadParam
+BadReference
+BadSig
+BadState
+BadTime
+DNSServiceAttributeCreate
+DNSServiceAttributeDeallocate
+DNSServiceAttributeSetAAAAPolicy
+DNSServiceAttributeSetHostKeyHash
+DNSServiceAttributeSetTimestamp
+DNSServiceBrowseInternal
+DNSServiceErrorCodeToString
+DNSServiceGetAddrInfoInternal
+DNSServiceQueryRecordInternal
+DNSServiceQueryRecordWithAttribute
+DNSServiceRegisterInternal
+DNSServiceRegisterRecordInternal
+DNSServiceRegisterRecordWithAttribute
+DNSServiceRegisterWithAttribute
+DNSServiceResolveInternal
+DNSServiceSendQueuedRequests
+DNSServiceSendQueuedRequestsInternal
+DNSServiceSendQueuedRequestsInternal ERROR: writev(fd:%d, written:%zd, total:%zd bytes) failed, errno[%d]:%s
+DNSServiceSendQueuedRequestsInternal: !sdr
+DNSServiceSendQueuedRequestsInternal: numMsg is 0
+DNSServiceSendQueuedRequestsInternal: writev(fd:%d, numMsg:%u, %zd bytes) succeed
+DNSServiceSleepKeepalive_sockaddr
+DNSServiceUpdateRecordWithAttribute
+DefunctConnection
+DoubleNAT
+Firewall
+Incompatible
+Invalid
+NATPortMappingDisabled
+NATPortMappingUnsupported
+NATTraversal
+NameConflict
+NoAuth
+NoError
+NoMemory
+NoRouter
+NoSuchKey
+NoSuchName
+NoSuchRecord
+NotInitialized
+NotPermitted
+P"TEag
+PbT!ag
+PjT)ag
+PolicyDenied
+PollingMode
+Refused
+ServiceNotRunning
+TBY!ag
+Timeout
+Transient
+Unknown
+Unsupported
+dnssd_clientstub ConnectToServer: Failed to get the file descriptor flags of socket %d %s
+dnssd_clientstub ConnectToServer: Failed to set FD_CLOEXEC on socket %d %s
+dnssd_clientstub ConnectionResponse: Record not found
+dnssd_clientstub ConnectionResponse: Record sdr mismatch: rec %p sdr %p
+dnssd_clientstub DNSServiceAddRecord called with non-DNSServiceRegister DNSServiceRef %p %u
+dnssd_clientstub DNSServiceProcessResult daemon version %u does not match client version %d
+dnssd_clientstub DNSServiceRegisterRecord called with non-DNSServiceCreateConnection DNSServiceRef %p %u
+dnssd_clientstub DNSServiceRemoveRecord called with invalid DNSRecordRef %p %08X %08X
+dnssd_clientstub DNSServiceSleepKeepalive cannot create connection
+dnssd_clientstub DNSServiceSleepKeepalive could not fit local/remote info
+dnssd_clientstub DNSServiceSleepKeepalive could not fit name
+dnssd_clientstub DNSServiceSleepKeepalive could not fit unique
+dnssd_clientstub DNSServiceSleepKeepalive local info failed %d
+dnssd_clientstub DNSServiceSleepKeepalive local/remote info not same
+dnssd_clientstub DNSServiceSleepKeepalive local6 info failed %d
+dnssd_clientstub DNSServiceSleepKeepalive remote info failed %d
+dnssd_clientstub DNSServiceSleepKeepalive remote6 info failed %d
+dnssd_clientstub DNSServiceSleepKeepalive: getpeername %d
+dnssd_clientstub DNSServiceSleepKeepalive: getsockname %d
+dnssd_clientstub SleepKeepaliveCallback context mismatch
+dnssd_clientstub kDNSServiceFlagsShareConnection used with invalid DNSServiceRef %p %08X %08X op %u
+dnssd_clientstub read_all(%d) DEFUNCT
+dnssd_clientstub read_all(%d) failed %ld/%ld %d %s
+get_required_tlv_length
+get_required_tlv_string_length
+get_required_tlv_uint32_length
+get_required_tlv_uint8_length
+get_tlv
+get_tlv_string
+get_tlv_uint32
+get_tlv_uuid
+kDNSServiceAttributeAAAAFallback
+put_tlv
+put_tlv_string
+put_tlv_uint16
+put_tlv_uint32
+put_tlv_uint8
+put_tlv_uuid
+strnlen
+writev

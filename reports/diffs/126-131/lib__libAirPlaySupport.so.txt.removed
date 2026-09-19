@@ -1,0 +1,19 @@
+/workspace/CarLifeProxy_Linux/Platform/HIDKnob.c
+/workspace/CarLifeProxy_Linux/Platform/HIDMediaButtons.c
+/workspace/CarLifeProxy_Linux/Platform/HIDProximity.c
+/workspace/CarLifeProxy_Linux/Platform/HIDTelephony.c
+/workspace/CarLifeProxy_Linux/Platform/HIDTouchScreen.c
+/workspace/CarLifeProxy_Linux/Platform/HIDTouchpad.c
+/workspace/CarLifeProxy_Linux/Support/AudioConverterDLL.c
+/workspace/CarLifeProxy_Linux/Support/AudioUtilsDLL.c
+/workspace/CarLifeProxy_Linux/Support/ScreenUtilsDLL.c
+@&Daag
+DebugPrintAssert
+P"TEag
+P&Teag
+PjT)ag
+_AudioStreamGetTypeID
+_ScreenStreamGetTypeID
+gAudioStreamTypeID != _kCFRuntimeNotATypeID
+gScreenStreamTypeID != _kCFRuntimeNotATypeID
+me->dllHandle
