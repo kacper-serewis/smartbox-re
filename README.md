@@ -11,6 +11,8 @@ Downloaded and compared the public HW501 application updates on 2026-09-19.
 
 Read [findings](reports/findings.md) for the meaningful differences and [comparison](reports/comparison.md) for every changed file and archive hash. [comparison.json](reports/comparison.json) contains all file hashes and pairwise comparisons. Web page diffs and added/removed binary strings are in `reports/diffs/`.
 
+The deeper [binary analysis](reports/binary-analysis.md) identifies actual iAP2 queue handling, CarPlay timeout recovery, MFi initialization, Bluetooth build, and discovery-stack changes, with annotated disassembly as evidence.
+
 ## Local artifacts
 
 Each available version has its own directory under `firmwares/hw501/<version>/`:
@@ -37,3 +39,15 @@ The downloader saves the history and latest-version responses, checks predictabl
 Archives are fetched directly from `http://43.138.184.52/appupdate/hw501_update_v<VERSION>.tar`, with a validated chunk-download fallback. Archive size and first/final chunks are checked against `appdatas`. The complete `app.img` is checked against its bundled MD5, and SHA-256 hashes are recorded for the archives and extracted files. Local checksums are not a vendor signature.
 
 This covers HW501 on the identified update service, not every hardware family sold under the Smartbox name. The current scan cannot establish that no other versions exist outside the scanned range or under different names.
+
+## Reproduce the binary analysis
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r scripts/requirements-analysis.txt
+.venv/bin/python scripts/analyze_binaries.py
+brew install binutils
+.venv/bin/python scripts/disassemble_evidence.py
+```
+
+The disassembly script accepts `--objdump /path/to/riscv-capable-objdump`; it defaults to GNU objdump on PATH or Homebrew's keg location. Apple's bundled objdump cannot disassemble these RISC-V images. Function fingerprints are triage aids, not semantic-equivalence tests; see the binary report for limitations concerning Andes instructions and stripped symbols.
