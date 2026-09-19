@@ -17,7 +17,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_BYTES = 64 * 1024 * 1024
-DISPLAY_PATTERN = re.compile(r'Recv proxy disply infos|set_carplay_screen_size|VideoWidth|WidthMM|HeightMM|widthPhysical|heightPhysical|carlifescreen|Auto setup proxy screen|sps pps width', re.I)
+DISPLAY_PATTERN = re.compile(r'Recv proxy disply infos|set_carplay_screen_size|VideoWidth|WidthMM|HeightMM|widthPhysical|heightPhysical|carlifescreen|Auto setup proxy screen|sps pps width|Phone display override|DisplayScale', re.I)
 
 
 class NoRedirects(HTTPRedirectHandler):

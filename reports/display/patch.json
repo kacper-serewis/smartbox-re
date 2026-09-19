@@ -1,0 +1,64 @@
+{
+  "version": 131,
+  "hardware": 501,
+  "label": "EXPERIMENTAL v131 density125 (physical metadata only)",
+  "built_at": "2026-09-19T15:54:58.684168+00:00",
+  "source": "Local patch of archived stock HW501 v131",
+  "size": 4485120,
+  "sha256": "f3f4a93505bde70608ff6bdc90d123e332129c5129da84d78ee858264e682963",
+  "parent_archive_sha256": "bbf89a7aaa399297609d1543fd0c977c6848c6284ecaa53e0fb4482af6a86466",
+  "app_size": 4472832,
+  "app_partition_limit": 5242880,
+  "app_md5": "dfbdb7b538be964f4ef35504d43efc9f",
+  "chunk_metadata": {
+    "result": 1,
+    "version": 131,
+    "pos": 0,
+    "itemsize": 32768,
+    "count": 137,
+    "filesize": 4485120,
+    "datasize": 32768
+  },
+  "changed_files": [
+    "bin/CPAAProxyEx"
+  ],
+  "patch": {
+    "stock_sha256": "a147d1b4fd2f73ed5a70b76c45cc5e5ca1aeaa8b1544d4aabc99b7a6618ecc84",
+    "patched_sha256": "12d009c2cda3e326eb6bc7488d9df42147858deb9b20d801e43254ccbc47a731",
+    "hook": 318580,
+    "stub": 1226848,
+    "stub_bytes": 635,
+    "instructions_bytes": 552,
+    "keys": {
+      "widthPixels": 1073104,
+      "heightPixels": 1073124,
+      "widthPhysical": 1073164,
+      "heightPhysical": 1073188
+    },
+    "symbols": {
+      "CFArrayGetCount": 136384,
+      "CFArrayGetValueAtIndex": 131952,
+      "CFGetTypeID": 135680,
+      "CFDictionaryGetTypeID": 132848,
+      "CFDictionaryGetInt64": 129088,
+      "CFDictionaryCreateMutableCopy": 133440,
+      "CFDictionarySetInt64": 131840,
+      "CFArrayEnsureCreatedAndAppend": 130656,
+      "CFRelease": 137952,
+      "MLOGD": 138496
+    },
+    "expected": {
+      "widthPixels": 800,
+      "heightPixels": 480,
+      "widthPhysical": 152,
+      "heightPhysical": 91
+    },
+    "target": {
+      "widthPhysical": 190,
+      "heightPhysical": 114
+    },
+    "normal_return": 318584,
+    "owned_return": 317076
+  },
+  "verification": "Re-extracted filesystem matches inputs, only CPAAProxyEx content differs from stock. Runtime behavior and iOS zoom eligibility are not yet validated."
+}

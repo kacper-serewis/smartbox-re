@@ -117,7 +117,8 @@ def main():
         print('getupdatestatus', device.request('getupdatestatus', b''), flush=True)
         return
     metadata, raw = load_release(args.release)
-    print(f'Validated stock v{metadata["version"]}: {len(raw):,} bytes, SHA256 {metadata["sha256"]}', flush=True)
+    label = metadata.get('label', f'stock v{metadata["version"]}')
+    print(f'Validated {label}: {len(raw):,} bytes, SHA256 {metadata["sha256"]}', flush=True)
     stage(device, metadata, raw)
     if args.action == 'apply':
         apply(device, metadata['version'])

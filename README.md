@@ -25,6 +25,8 @@ Read [findings](reports/findings.md) for the meaningful differences and [compari
 
 The deeper [binary analysis](reports/binary-analysis.md) identifies actual iAP2 queue handling, CarPlay timeout recovery, MFi initialization, Bluetooth build, and discovery-stack changes, with annotated disassembly as evidence.
 
+The [Corsa display experiment](reports/display/experiment.md) documents the verified running v131 baseline, a guarded physical-display-metadata patch, emulator validation, and offline install/rollback commands. It is experimental and has not yet been tested on the adapter.
+
 ## Local artifacts
 
 Each available version has its own directory under `firmwares/hw501/<version>/`:
