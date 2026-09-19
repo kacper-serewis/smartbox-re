@@ -1,0 +1,181 @@
+{
+  "source": "firmwares/hw501/131/rootfs/bin/CPAAProxyEx",
+  "sha256": "a147d1b4fd2f73ed5a70b76c45cc5e5ca1aeaa8b1544d4aabc99b7a6618ecc84",
+  "scope": "Static evidence only; no firmware execution or device writes",
+  "keys": [
+    {
+      "key": "features",
+      "string_address": "0x1049e4"
+    },
+    {
+      "key": "viewAreas",
+      "string_address": "0x104ffc"
+    },
+    {
+      "key": "features",
+      "string_address": "0x105c78",
+      "cfstring_address": "0x105c70"
+    },
+    {
+      "key": "setNightMode",
+      "string_address": "0x105d44",
+      "cfstring_address": "0x105d3c"
+    },
+    {
+      "key": "nightMode",
+      "string_address": "0x105d5c",
+      "cfstring_address": "0x105d54"
+    },
+    {
+      "key": "displays",
+      "string_address": "0x105fa8",
+      "cfstring_address": "0x105fa0"
+    },
+    {
+      "key": "primaryInputDevice",
+      "string_address": "0x105fbc",
+      "cfstring_address": "0x105fb4"
+    },
+    {
+      "key": "widthPixels",
+      "string_address": "0x105fd8",
+      "cfstring_address": "0x105fd0"
+    },
+    {
+      "key": "heightPixels",
+      "string_address": "0x105fec",
+      "cfstring_address": "0x105fe4"
+    },
+    {
+      "key": "maxFPS",
+      "string_address": "0x106004",
+      "cfstring_address": "0x105ffc"
+    },
+    {
+      "key": "widthPhysical",
+      "string_address": "0x106014",
+      "cfstring_address": "0x10600c"
+    },
+    {
+      "key": "heightPhysical",
+      "string_address": "0x10602c",
+      "cfstring_address": "0x106024"
+    },
+    {
+      "key": "initialViewArea",
+      "string_address": "0x106044",
+      "cfstring_address": "0x10603c"
+    },
+    {
+      "key": "viewAreas",
+      "string_address": "0x10605c",
+      "cfstring_address": "0x106054"
+    },
+    {
+      "key": "originXPixels",
+      "string_address": "0x106070",
+      "cfstring_address": "0x106068"
+    },
+    {
+      "key": "originYPixels",
+      "string_address": "0x106088",
+      "cfstring_address": "0x106080"
+    },
+    {
+      "key": "safeArea",
+      "string_address": "0x1060a0",
+      "cfstring_address": "0x106098"
+    },
+    {
+      "key": "drawUIOutsideSafeArea",
+      "string_address": "0x1060b4",
+      "cfstring_address": "0x1060ac"
+    },
+    {
+      "key": "hidDevices",
+      "string_address": "0x106104",
+      "cfstring_address": "0x1060fc"
+    },
+    {
+      "key": "displayUUID",
+      "string_address": "0x106118",
+      "cfstring_address": "0x106110"
+    },
+    {
+      "key": "hidDescriptor",
+      "string_address": "0x10612c",
+      "cfstring_address": "0x106124"
+    },
+    {
+      "key": "rightHandDrive",
+      "string_address": "0x10623c",
+      "cfstring_address": "0x106234"
+    },
+    {
+      "key": "rightHandDrive",
+      "string_address": "0x10af34",
+      "cfstring_address": "0x10af2c"
+    },
+    {
+      "key": "nightMode",
+      "string_address": "0x10af4c",
+      "cfstring_address": "0x10af44"
+    },
+    {
+      "key": "widthPixels",
+      "string_address": "0x10afc4",
+      "cfstring_address": "0x10afbc"
+    },
+    {
+      "key": "heightPixels",
+      "string_address": "0x10afd8",
+      "cfstring_address": "0x10afd0"
+    },
+    {
+      "key": "displays",
+      "string_address": "0x10b018",
+      "cfstring_address": "0x10b010"
+    },
+    {
+      "key": "hidDevices",
+      "string_address": "0x10b05c",
+      "cfstring_address": "0x10b054"
+    },
+    {
+      "key": "displayUUID",
+      "string_address": "0x10b070",
+      "cfstring_address": "0x10b068"
+    }
+  ],
+  "ranges": {
+    "display_array_input": [
+      "0x2aee4",
+      "0x2afa0"
+    ],
+    "display_geometry_input": [
+      "0x2b9d4",
+      "0x2bd60"
+    ],
+    "driver_side_and_night_input": [
+      "0x2b7a0",
+      "0x2b854"
+    ],
+    "driver_side_and_night_output": [
+      "0x4d870",
+      "0x4d8cc"
+    ],
+    "night_mode_command": [
+      "0x294f0",
+      "0x2957c"
+    ],
+    "cached_display_output": [
+      "0x4dc4c",
+      "0x4dcfc"
+    ],
+    "video_config_packet": [
+      "0x4eca8",
+      "0x4eea0"
+    ]
+  },
+  "limitation": "GNU objdump leaves vendor-specific Andes instructions undecoded; nearest symbol labels may not name the containing function."
+}
