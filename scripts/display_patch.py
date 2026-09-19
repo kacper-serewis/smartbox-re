@@ -15,7 +15,10 @@ OWNED_RETURN = 0x4d694
 STUB = 0x12b860
 BASE = 0x10000
 EXPECTED = {'widthPixels':800,'heightPixels':480,'widthPhysical':152,'heightPhysical':91}
-TARGET = {'widthPhysical':190,'heightPhysical':114}
+TARGETS = {
+    125: {'widthPhysical':190,'heightPhysical':114},
+    150: {'widthPhysical':228,'heightPhysical':137},
+}
 REG = {'zero':0,'ra':1,'sp':2,'t0':5,'s0':8,'s1':9,'a0':10,'a1':11,'a2':12,'a3':13,'s2':18,'s3':19,'s4':20}
 
 
@@ -83,7 +86,10 @@ class Assembler:
         return b''.join(struct.pack('<I',w) for w in self.words)+extra
 
 
-def patch(raw):
+def patch(raw, density=125):
+    if density not in TARGETS:
+        raise ValueError('Supported density profiles: 125, 150')
+    target=TARGETS[density]
     if hashlib.sha256(raw).hexdigest()!=STOCK_SHA:
         raise ValueError('This patch only supports the archived stock v131 CPAAProxyEx')
     elf=ELFFile(io.BytesIO(raw))
@@ -113,7 +119,7 @@ def patch(raw):
     a.addi('a0','zero',0);a.addi('a1','zero',0);a.addi('a2','s2',0)
     a.call(symbols['CFDictionaryCreateMutableCopy']);a.addi('s3','a0',0)
     a.branch('eq','s3','zero','fallback')
-    for key,value in TARGET.items():
+    for key,value in target.items():
         a.addi('a0','s3',0);a.li('a1',keys[key]);a.addi('a2','zero',value);a.addi('a3','zero',0)
         a.call(symbols['CFDictionarySetInt64']);a.branch('ne','a0','zero','fallback')
     a.addi('a0','sp',0);a.addi('a1','s3',0)
@@ -134,7 +140,8 @@ def patch(raw):
     a.call(symbols['CFRelease'])
     a.label('restore');restore();a.j(NORMAL_RETURN)
     instructions_size=len(a.words)*4
-    stub=a.finish({'tag':'DisplayScale','message':'Phone display override: 800x480 152x91mm -> 190x114mm (experimental)\n'})
+    dimensions=f'{target["widthPhysical"]}x{target["heightPhysical"]}'
+    stub=a.finish({'tag':'DisplayScale','message':f'Phone display override: 800x480 152x91mm -> {dimensions}mm (experimental)\n'})
     output=bytearray(raw)
     start=STUB-BASE;stop=start+len(stub)
     if stop>0x11bfa8 or any(raw[start:stop]):raise ValueError('Insufficient zero padding')
@@ -150,5 +157,5 @@ def patch(raw):
             struct.pack_into('<II',output,header+16,stop,stop)
             loads.append(index)
     assert len(loads)==1 and len(output)==len(raw)
-    meta={'stock_sha256':STOCK_SHA,'patched_sha256':hashlib.sha256(output).hexdigest(),'hook':HOOK,'stub':STUB,'stub_bytes':len(stub),'instructions_bytes':instructions_size,'keys':keys,'symbols':{k:symbols[k] for k in ('CFArrayGetCount','CFArrayGetValueAtIndex','CFGetTypeID','CFDictionaryGetTypeID','CFDictionaryGetInt64','CFDictionaryCreateMutableCopy','CFDictionarySetInt64','CFArrayEnsureCreatedAndAppend','CFRelease','MLOGD')},'expected':EXPECTED,'target':TARGET,'normal_return':NORMAL_RETURN,'owned_return':OWNED_RETURN}
+    meta={'stock_sha256':STOCK_SHA,'patched_sha256':hashlib.sha256(output).hexdigest(),'hook':HOOK,'stub':STUB,'stub_bytes':len(stub),'instructions_bytes':instructions_size,'keys':keys,'symbols':{k:symbols[k] for k in ('CFArrayGetCount','CFArrayGetValueAtIndex','CFGetTypeID','CFDictionaryGetTypeID','CFDictionaryGetInt64','CFDictionaryCreateMutableCopy','CFDictionarySetInt64','CFArrayEnsureCreatedAndAppend','CFRelease','MLOGD')},'expected':EXPECTED,'target':target,'normal_return':NORMAL_RETURN,'owned_return':OWNED_RETURN}
     return bytes(output),meta

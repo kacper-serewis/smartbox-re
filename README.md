@@ -25,7 +25,7 @@ Read [findings](reports/findings.md) for the meaningful differences and [compari
 
 The deeper [binary analysis](reports/binary-analysis.md) identifies actual iAP2 queue handling, CarPlay timeout recovery, MFi initialization, Bluetooth build, and discovery-stack changes, with annotated disassembly as evidence.
 
-The [Corsa display experiment](reports/display/experiment.md) documents the verified running v131 baseline, a guarded physical-display-metadata patch, emulator validation, and offline install/rollback commands. It is experimental and has not yet been tested on the adapter.
+The [Corsa display experiment](reports/display/experiment.md) documents the verified running v131 baseline, a guarded physical-display-metadata patch, emulator validation, and offline install/rollback commands. On their Opel Corsa 2017 with iOS 27, the user confirmed smaller screen items and Smart Display Zoom availability with density125, then **5 columns × 3 rows (15 apps per page)** with density150, up from 4×2. The successful density150 package is preserved under `firmwares/experiments/hw501_131_density150/`.
 
 ## Local artifacts
 
