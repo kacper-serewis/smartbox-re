@@ -1,3 +1,4 @@
 firmwares/
 __pycache__/
 .venv/
+device-snapshots/

@@ -1,5 +1,17 @@
 # Smartbox HW501 firmware research
 
+## Collect display information offline
+
+With the adapter plugged into the Corsa, connect the iPhone to CarPlay and this Mac to the adapter's Wi-Fi. Internet is not needed. Run:
+
+```sh
+python3 scripts/collect_device.py
+```
+
+It samples the running app version and CarPlay display status for 60 seconds, then requests a local diagnostic-log archive. Output is saved under `device-snapshots/offline-<timestamp>/`, including `summary.json`, `display-lines.txt`, raw status responses, and the original log archive when available. It does not change settings or firmware or upload logs to the vendor. Use `--seconds 120` to allow more time to connect CarPlay, or `--no-logs` to collect status only. Reconnect to the internet afterward to review the saved files together.
+
+## Downloaded firmware
+
 Downloaded and compared the public HW501 application updates on 2026-09-19.
 
 | Release | Archive bytes | Status |
