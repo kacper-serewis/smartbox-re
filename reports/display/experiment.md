@@ -32,6 +32,32 @@ python3 scripts/update_device.py apply --release firmwares/experiments/hw501_131
 
 Both profiles passed the six emulator tests (12 tests total). The new package also passed filesystem metadata/content verification and the updater's archive validation. Its app image remains 4,472,832 bytes. To rebuild this second trial, use `.venv/bin/python scripts/build_display_firmware.py --density 150`.
 
+## Midpoint trial: density137.5 — prepared, awaiting car test
+
+The user requested a mode between density125 and density150. This package reports **209×125 mm**, approximately 137.5% of stock physical dimensions, rounded to whole millimeters. It preserves the same 800×480 pixels, frame-rate and touch metadata, and exact-match guard. Its UI size and launcher grid still need testing; a midpoint in reported dimensions does not guarantee a midpoint in iOS layout.
+
+| Profile | Reported size | User-reported launcher grid |
+| --- | --- | --- |
+| density125 | 190×114 mm | 4 columns × 2 rows |
+| density137.5 | 209×125 mm | Not yet tested |
+| density150 | 228×137 mm | 5 columns × 3 rows |
+
+Package: `firmwares/experiments/hw501_131_density137.5/hw501_131.tar`. SHA-256: `67d2247f9748c2e372215ffae1efd47d69fdd86746d627e74ac7c340e00edcbf`. Details: [patch-density137.5.json](patch-density137.5.json).
+
+Install while connected to the adapter's Wi-Fi:
+
+```sh
+python3 scripts/update_device.py apply --release firmwares/experiments/hw501_131_density137.5
+```
+
+Wait for 100%, then unplug/reconnect and reconnect CarPlay. Compare both Smart Display Zoom settings and check the grid, text size, and touch alignment. To restore the confirmed 5×3 build:
+
+```sh
+python3 scripts/update_device.py apply --release firmwares/experiments/hw501_131_density150
+```
+
+All three profiles passed six emulator tests each (18 total). The midpoint package passed filesystem verification and updater archive validation; both earlier archives and executables remain unchanged. Rebuild with `.venv/bin/python scripts/build_display_firmware.py --density 137.5`.
+
 ## Verified baseline
 
 The offline collection from 2026-09-19 confirms that the adapter runs app code **131**, build **2026081801**, over system **20250811**. The Corsa supplies one observed display description: **800×480 pixels, 60 fps, 152×91 mm**. The video uses the full 800×480 rectangle. The user confirmed Smart Display Zoom is still missing after the stock update.

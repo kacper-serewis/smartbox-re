@@ -33,10 +33,11 @@ def inventory(root):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--density',type=int,choices=(125,150),default=125,
+    parser.add_argument('--density',type=float,choices=(125,137.5,150),default=125,
                         help='Reported physical size as a percentage of stock (default: 125)')
     args=parser.parse_args()
-    output=ROOT/f'firmwares/experiments/hw501_131_density{args.density}'
+    profile=f'{args.density:g}'
+    output=ROOT/f'firmwares/experiments/hw501_131_density{profile}'
     for tool in ('mksquashfs','unsquashfs'):
         if not shutil.which(tool):raise SystemExit(f'Missing tool: {tool}')
     original=(SOURCE/'rootfs/bin/CPAAProxyEx').read_bytes()
@@ -81,10 +82,10 @@ def main():
         (output/'archive/appmd5sum.txt').write_bytes(md5)
         (output/'CPAAProxyEx.patched').write_bytes(modified)
         raw=archive.read_bytes();step=32768
-        manifest={'version':131,'hardware':501,'label':f'EXPERIMENTAL v131 density{args.density} (physical metadata only)','built_at':datetime.now(timezone.utc).isoformat(),'source':'Local patch of archived stock HW501 v131','size':len(raw),'sha256':sha(raw),'parent_archive_sha256':source_manifest['sha256'],'app_size':len(image_data),'app_partition_limit':0x500000,'app_md5':md5.decode().strip(),'chunk_metadata':{'result':1,'version':131,'pos':0,'itemsize':step,'count':(len(raw)+step-1)//step,'filesize':len(raw),'datasize':step},'changed_files':['bin/CPAAProxyEx'],'patch':details,'verification':'Re-extracted filesystem matches inputs, only CPAAProxyEx content differs from stock. Runtime behavior and iOS zoom eligibility are not yet validated.'}
+        manifest={'version':131,'hardware':501,'label':f'EXPERIMENTAL v131 density{profile} (physical metadata only)','built_at':datetime.now(timezone.utc).isoformat(),'source':'Local patch of archived stock HW501 v131','size':len(raw),'sha256':sha(raw),'parent_archive_sha256':source_manifest['sha256'],'app_size':len(image_data),'app_partition_limit':0x500000,'app_md5':md5.decode().strip(),'chunk_metadata':{'result':1,'version':131,'pos':0,'itemsize':step,'count':(len(raw)+step-1)//step,'filesize':len(raw),'datasize':step},'changed_files':['bin/CPAAProxyEx'],'patch':details,'verification':'Re-extracted filesystem matches inputs, only CPAAProxyEx content differs from stock. Runtime behavior and iOS zoom eligibility are not yet validated.'}
         (output/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
         report=ROOT/'reports/display';report.mkdir(exist_ok=True)
-        (report/('patch.json' if args.density==125 else f'patch-density{args.density}.json')).write_text(json.dumps(manifest,indent=2)+'\n')
+        (report/('patch.json' if args.density==125 else f'patch-density{profile}.json')).write_text(json.dumps(manifest,indent=2)+'\n')
         print(f'Built: {archive}\nApp image: {len(image_data):,} / 5,242,880 bytes\nArchive SHA256: {manifest["sha256"]}\nVerified: only CPAAProxyEx changed; original display objects remain unmodified by the tested hook.')
 
 

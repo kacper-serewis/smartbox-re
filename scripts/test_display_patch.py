@@ -120,6 +120,11 @@ class DisplayPatchTests(unittest.TestCase):
         with self.assertRaises(ValueError):patch(b'wrong firmware',density=self.density)
 
 
+class DisplayPatch1375Tests(DisplayPatchTests):
+    density=137.5
+    dimensions=(209,125)
+
+
 class DisplayPatch150Tests(DisplayPatchTests):
     density=150
     dimensions=(228,137)

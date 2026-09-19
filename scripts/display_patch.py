@@ -17,6 +17,7 @@ BASE = 0x10000
 EXPECTED = {'widthPixels':800,'heightPixels':480,'widthPhysical':152,'heightPhysical':91}
 TARGETS = {
     125: {'widthPhysical':190,'heightPhysical':114},
+    137.5: {'widthPhysical':209,'heightPhysical':125},
     150: {'widthPhysical':228,'heightPhysical':137},
 }
 REG = {'zero':0,'ra':1,'sp':2,'t0':5,'s0':8,'s1':9,'a0':10,'a1':11,'a2':12,'a3':13,'s2':18,'s3':19,'s4':20}
@@ -88,7 +89,7 @@ class Assembler:
 
 def patch(raw, density=125):
     if density not in TARGETS:
-        raise ValueError('Supported density profiles: 125, 150')
+        raise ValueError('Supported density profiles: 125, 137.5, 150')
     target=TARGETS[density]
     if hashlib.sha256(raw).hexdigest()!=STOCK_SHA:
         raise ValueError('This patch only supports the archived stock v131 CPAAProxyEx')
