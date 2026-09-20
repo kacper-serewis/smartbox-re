@@ -20,6 +20,7 @@ the computer.
 
 | Tool | What it does | Device impact | Start here |
 |---|---|---|---|
+| [Standalone Mac CarPlay viewer](https://github.com/kacper-serewis/smartbox-carplay-viewer) | Receives the HW501 dongle's real wired CarPlay output on a prepared Apple Silicon Mac and displays it in a loopback browser. Maintained in its own public repository. | **No dongle firmware change; requires an experimental Mac USB driver and temporary Mac security changes** | [Installation and safety guide](https://github.com/kacper-serewis/smartbox-carplay-viewer/blob/main/docs/INSTALL.md) |
 | [Device inspector](scripts/update_device.py) | Reads the adapter identity, CarPlay information, settings, and update status into a timestamped local snapshot. | **No firmware change** | `python3 scripts/update_device.py inspect` |
 | [Offline diagnostic collector](scripts/collect_device.py) | Samples display status and downloads the adapter's diagnostic archive while connected to its Wi-Fi. | **No firmware or setting change** | `python3 scripts/collect_device.py` |
 | [Stock firmware downloader](scripts/download_firmwares.py) | Downloads public HW501 application updates, verifies their structure/checksums, and records provenance. No dongle connection is needed. | **Does not contact the dongle** | `python3 scripts/download_firmwares.py --probe-unlisted` |
