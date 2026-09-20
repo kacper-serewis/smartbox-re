@@ -36,7 +36,7 @@ static int config(void *p, int n, int w, int h, int x, int y, int vw, int vh) {
 static int frame(void *p, int n) { assert(locked && p == payload && n > 4); frames++; return frame_error; }
 /* Stock code's PC-relative addressing works at BASE; preserve our caller's gp.
  * Test helpers compile without gp-relative relaxation. */
-extern void invoke(uintptr_t fn, void *a, void *b, int c, int d, int e);
+extern int invoke(uintptr_t fn, void *a, void *b, int c, int d, int e);
 __asm__(".text\n.align 2\n.global invoke\ninvoke:\n"
         "addi sp,sp,-16\nsw ra,12(sp)\nsw gp,8(sp)\n"
         "mv t0,a0\nmv a0,a1\nmv a1,a2\nmv a2,a3\nmv a3,a4\nmv a4,a5\n"
@@ -99,14 +99,21 @@ __asm__(".text\n.align 2\n.global invoke8\ninvoke8:\n"
         "li gp,0x1012fb40\njalr t0\nlw gp,8(sp)\nlw ra,12(sp)\naddi sp,sp,16\nret\n");
 static unsigned char wire[2*1024*1024];
 static int wire_size;
+static FILE *wire_capture;
 static void *wire_buffer(int size) { assert(size > 0 && size <= (int)sizeof(wire)); return wire; }
 static int wire_send(int fd, const void *buffer, int size) {
-    assert(fd == 9 && buffer == wire && size > 128 && size <= (int)sizeof(wire)); wire_size=size; return size;
+    assert(fd == 9 && buffer == wire && size > 128 && size <= (int)sizeof(wire)); wire_size=size;
+    if (wire_capture) {
+        unsigned char header[4] = {size >> 24, size >> 16, size >> 8, size};
+        assert(fwrite(header, 1, 4, wire_capture) == 4);
+        assert(fwrite(buffer, 1, size, wire_capture) == (size_t)size);
+    }
+    return size;
 }
 static int aes_copy(void *ctx, const void *src, int size, void *dst) {
     (void)ctx; assert(size > 0); memmove(dst, src, size); return 0;
 }
-static void check_wire(void) {
+static void setup_wire(void) {
     /* Keep the actual header builder, Annex-B/AVCC converter and frame envelope.
      * Model allocation, network writes, mutexes and AES as an identity transform. */
     memcpy(mapped+0x4eca8, original_config, 8); memcpy(mapped+0x4ee7c, original_frame, 8);
@@ -115,6 +122,9 @@ static void check_wire(void) {
     *(uint32_t *)(mapped+0x12e108) = 9;
     *(uint32_t *)(mapped+0x12eff4) = BASE+0x180100;
     __builtin___clear_cache(mapped, mapped+0x200000);
+}
+static void check_wire(void) {
+    setup_wire();
     unsigned char cfg[] = {0,0,0,1,0x27,0x64,0,0x1f,0xac,0x13,0x14,0x50,0x32,0x0f,0x69,0xb8,0x08,0x68,0x30,0x36,0x82,0x21,0x19,0x60,0,0,0,1,0x28,0xee,0x3c,0xb0};
     assert(!invoke8(BASE+0x4eca8, cfg, sizeof(cfg), 800, 480, 0, 0, 800, 480));
     assert(wire_size > 128 && wire[4] == 1);
@@ -127,6 +137,30 @@ static void check_wire(void) {
     assert(wire_size == 128+sizeof(nal) && wire[4] == 0);
     assert(!memcmp(wire+128,"\0\0\0\4",4) && !memcmp(wire+132,nal+4,4));
     puts("PASS: actual native wire routines build source/viewport headers, avcC and one-NAL AVCC frames (AES/network modeled)");
+}
+/* Each input record is eight big-endian words (config, length, w,h,x,y,vw,vh)
+ * followed by Annex B bytes from replay-native. Output is length + the exact
+ * bytes passed to the stock network writer. AES is an identity test substitute. */
+static void packetize(const char *input_path, const char *output_path) {
+    setup_wire();
+    FILE *input = fopen(input_path, "rb"); assert(input);
+    wire_capture = fopen(output_path, "wb"); assert(wire_capture);
+    unsigned records=0; unsigned char header[32]; size_t got;
+    while ((got=fread(header, 1, sizeof(header), input))) {
+        assert(got == sizeof(header)); uint32_t v[8];
+        for (int i=0; i<8; i++) v[i]=(uint32_t)header[i*4]<<24 | (uint32_t)header[i*4+1]<<16 | (uint32_t)header[i*4+2]<<8 | header[i*4+3];
+        assert(v[0]<=1 && v[1]>=5 && v[1]<=1024*1024);
+        unsigned char *data=malloc(v[1]); assert(data);
+        assert(fread(data,1,v[1],input)==v[1]);
+        if (v[0]) {
+            assert(v[2]>0 && v[2]<=1920 && v[3]>0 && v[3]<=1080);
+            assert(v[4]==0 && v[5]==0 && v[6]==v[2] && v[7]==v[3]);
+            assert(!invoke8(BASE+0x4eca8,data,v[1],v[2],v[3],v[4],v[5],v[6],v[7]));
+        } else assert(!invoke(BASE+0x4ee7c,data,(void *)(uintptr_t)v[1],0,0,0));
+        free(data); records++;
+    }
+    assert(!ferror(input)); fclose(input); assert(!fclose(wire_capture)); wire_capture=NULL;
+    printf("Packetized %u records through native senders\n",records);
 }
 static void candidate_lock(void *p) { lock(p); }
 static void candidate_unlock(void *p) { unlock(p); }
@@ -190,7 +224,8 @@ static void check_sps(void) {
     puts("PASS: bounded SPS parsing accepts captured stock geometry and rejects malformed input");
 }
 int main(int argc, char **argv) {
-    assert(argc == 2 || argc == 3); setvbuf(stdout, NULL, _IONBF, 0); load(argv[1]);
+    assert(argc == 2 || argc == 3 || argc == 5); setvbuf(stdout, NULL, _IONBF, 0); load(argv[1]);
+    if (argc == 5) { assert(!strcmp(argv[2], "--packetize")); packetize(argv[3],argv[4]); return 0; }
     if (argc == 3) { assert(!strcmp(argv[2], "--wire")); check_wire(); return 0; }
     reset(); app[0x216a]=1; /* welcome screen configuration already sent */
     incoming(7, 1); incoming(5, 0);

@@ -11,6 +11,8 @@ func check(_ status: OSStatus, _ operation: String) throws {
 }
 final class Preview {
     let directory: URL
+    let exportFrames: Bool
+    var exported: [[String: Any]] = []
     let context = CIContext(options: [.useSoftwareRenderer: false])
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let lock = NSLock()
@@ -23,26 +25,28 @@ final class Preview {
     var errors = 0
     var width = 0
     var height = 0
-    init(_ path: String) { directory = URL(fileURLWithPath: path) }
+    init(_ path: String, exportFrames: Bool) { directory = URL(fileURLWithPath: path); self.exportFrames = exportFrames }
     func writeState() throws {
         let state: [String: Any] = ["frames_decoded": decoded, "width": width,
                 "height": height, "decode_errors": errors]
         try JSONSerialization.data(withJSONObject: state).write(to: directory.appendingPathComponent("decoder.json"), options: .atomic)
     }
-    func output(_ image: CVImageBuffer?, _ status: OSStatus) {
+    func output(_ image: CVImageBuffer?, _ status: OSStatus, _ index: Int) {
         lock.lock(); defer { lock.unlock() }
         guard status == noErr, let image else { errors += 1; return }
         decoded += 1
         width = CVPixelBufferGetWidth(image)
         height = CVPixelBufferGetHeight(image)
         let now = ProcessInfo.processInfo.systemUptime
-        if now - lastImage < 0.1 { return }
+        if exportFrames ? index % 3 != 0 : now - lastImage < 0.1 { return }
         lastImage = now
         do {
             let pixels = CIImage(cvPixelBuffer: image)
             guard let jpeg = context.jpegRepresentation(of: pixels, colorSpace: colorSpace,
                     options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.8]) else { return }
-            try jpeg.write(to: directory.appendingPathComponent("frame.jpg"), options: .atomic)
+            let file = exportFrames ? String(format: "frame-%06d.jpg", index) : "frame.jpg"
+            try jpeg.write(to: directory.appendingPathComponent(file), options: .atomic)
+            if exportFrames { exported.append(["index": index, "file": file, "width": width, "height": height]) }
             try writeState()
         } catch { fputs("Preview output: \(error)\n", stderr) }
     }
@@ -69,8 +73,8 @@ final class Preview {
                 return CMVideoFormatDescriptionCreateFromH264ParameterSets(allocator: nil, parameterSetCount: 2,
                     parameterSetPointers: &pointers, parameterSetSizes: &sizes, nalUnitHeaderLength: 4, formatDescriptionOut: &format)
             } }, "H264 format")
-            var callback = VTDecompressionOutputCallbackRecord(decompressionOutputCallback: { opaque, _, status, _, image, _, _ in
-                Unmanaged<Preview>.fromOpaque(opaque!).takeUnretainedValue().output(image, status)
+            var callback = VTDecompressionOutputCallbackRecord(decompressionOutputCallback: { opaque, ref, status, _, image, _, _ in
+                Unmanaged<Preview>.fromOpaque(opaque!).takeUnretainedValue().output(image, status, Int(bitPattern: ref) - 1)
             }, decompressionOutputRefCon: Unmanaged.passUnretained(self).toOpaque())
             try check(VTDecompressionSessionCreate(allocator: nil, formatDescription: format!, decoderSpecification: nil,
                 imageBufferAttributes: [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA] as CFDictionary,
@@ -94,16 +98,20 @@ final class Preview {
             sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timing,
             sampleSizeEntryCount: 1, sampleSizeArray: &size, sampleBufferOut: &sample), "H264 sample")
         count += 1
-        try check(VTDecompressionSessionDecodeFrame(session, sampleBuffer: sample!, flags: [], frameRefcon: nil,
+        try check(VTDecompressionSessionDecodeFrame(session, sampleBuffer: sample!, flags: [], frameRefcon: UnsafeMutableRawPointer(bitPattern: count),
             infoFlagsOut: nil), "H264 decode")
     }
 }
-guard CommandLine.arguments.count == 2 else { fatalError("preview OUTPUT_DIRECTORY") }
-let preview = Preview(CommandLine.arguments[1])
+guard CommandLine.arguments.count == 2 || (CommandLine.arguments.count == 3 && CommandLine.arguments[2] == "--export") else { fatalError("preview OUTPUT_DIRECTORY [--export]") }
+let preview = Preview(CommandLine.arguments[1], exportFrames: CommandLine.arguments.count == 3)
 while let line = readLine() {
     do { try preview.feed(JSONDecoder().decode(Packet.self, from: Data(line.utf8))) }
     catch { fputs("Decode error: \(error)\n", stderr); preview.errors += 1 }
 }
 preview.finish()
+if preview.exportFrames {
+    do { try JSONSerialization.data(withJSONObject: preview.exported).write(to: preview.directory.appendingPathComponent("frames.json"), options: .atomic) }
+    catch { fputs("Frame export: \(error)\n", stderr); exit(1) }
+}
 print("Decoded \(preview.decoded) frames; errors \(preview.errors)")
 if preview.errors != 0 { exit(1) }
