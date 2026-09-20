@@ -41,6 +41,19 @@ test, not an unattended head-unit application.
 - All three tests verified restoration of Mac host mode and the original USB profile.
   The protocol errors are retained in the evidence, not reclassified as success.
 
+After the stream-scoped teardown fix:
+
+- `mac-usb-session-20260920T181219.578567Z`: 87 frames at 800×480, zero decoder
+  errors, successful USB cleanup after clearing the earlier stale dongle session.
+- `mac-usb-session-20260920T181426.317233Z`: 117 frames at 800×480, zero decoder
+  errors; the phone's CarPlay app was visibly verified. A second USB session
+  succeeded without another dongle power cycle. Mac role/profile cleanup passed.
+- These live runs used one screen stream each. Actual stream-scoped teardown and
+  recreation were verified with local encrypted TCP and persistent RTSP tests,
+  including two distinct stream IDs, preserved capture files, retained audio,
+  malformed requests, identity mismatches, and full session close. They were not
+  observed again on the physical dongle in these two runs.
+
 The dongle's status page reports version 220.68 and 800×480 at 30 fps because
 those are the receiver capabilities advertised by this test. They do not alone
 prove video delivery. The screen packets, decoded image, and decoder counters do.
@@ -59,6 +72,19 @@ prove video delivery. The screen packets, decoded image, and decoder counters do
 6. Screen TCP frames have a 128-byte little-endian header. Video frames alone are
    AES-CTR decrypted using SHA-512-derived per-stream key/IV. AVC configuration
    and length-prefixed H.264 samples feed the existing macOS VideoToolbox decoder.
+
+Stream-scoped TEARDOWN now closes and joins only the selected video/audio workers.
+Screen SETUP can then create a fresh stream ID and AES context while session
+timing, events and other streams remain open. A full TEARDOWN closes the session.
+Malformed teardown lists and mismatching stream identities are rejected before
+any worker is stopped. Repeated teardown of an absent stream is harmless.
+
+Each stream has a separate `stream-NN/` capture directory, including video packet
+records and a decoder snapshot. The root image and decoder counters show the
+latest stream; `video-summary.json` totals all decoded streams after the test.
+The session retains its aggregate 1,800-frame / 32-MiB video budget across stream
+restarts, with at most 16 stream setups. Stream re-creation does not extend the
+USB role deadline.
 
 Media sockets accept only the established dongle peer on the USB scope. Requests,
 headers, bodies, capture size, client counts and lifetime are bounded. Device
@@ -87,6 +113,7 @@ a subsequent capture worked without another power cycle.
 
 ```sh
 .venv/bin/python scripts/test_mac_carplay_observer.py
+.venv/bin/python scripts/test_mac_carplay_streams.py
 xcrun clang++ -std=c++14 -Wall -Wextra -Werror -fsanitize=address,undefined \
   experiments/macos-usb/iap2_auth_probe_test.cpp \
   -o device-snapshots/mac-auth-tests/iap2_auth_probe_test

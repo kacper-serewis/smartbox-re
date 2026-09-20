@@ -54,9 +54,9 @@ socket compatibility library loaded, and the updater remained idle/reachable.
 A follow-up USB session (`mac-usb-session-20260920T180630.159660Z`) authenticated
 and reached RECORD. Its subsequent stream teardown/recreation hit the Mac
 receiver's `Screen stream already started` restriction, so this follow-up does
-not prove restored normal CarPlay video. Handling stream-scoped TEARDOWN is a
-remaining Mac receiver task. The Mac host role and original configuration were
-restored after both sessions.
+not prove restored normal CarPlay video. Stream-scoped TEARDOWN was subsequently
+fixed and tested; see [the later receiver results](mac-auth-analysis/HEADUNIT-PREVIEW.md).
+The Mac host role and original configuration were restored after both sessions.
 
 ## Limits
 

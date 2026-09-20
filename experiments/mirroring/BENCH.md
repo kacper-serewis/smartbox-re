@@ -39,6 +39,9 @@ The browser shows video received over USB from the dongle. Compare landscape,
 portrait, and return to landscape. A waiting screen or zero decoded frames is
 not a successful mirroring test. The Mac accepting a stream does not prove the
 Corsa accepts its codec settings and dimensions.
+See the [measured software resolution bounds](../../reports/overlay/mirroring-resolution-limits.md).
+The Mac receiver stores each USB stream's packets under `stream-NN/`, so a
+teardown/reconnect no longer overwrites the earlier stream's evidence.
 
 Collect the incoming phone stream and restore the original application:
 

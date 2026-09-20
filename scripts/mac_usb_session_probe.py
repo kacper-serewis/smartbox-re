@@ -173,12 +173,23 @@ def main():
     milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted', 'network': 'session_start_sent'}[args.stage]
     network_ok = observer is None or any(record.get('request') == 'POST /auth-setup RTSP/1.0' and record.get('response_status') == 200 for record in observer.records)
     if observer:
+        network_ok = network_ok and all(record.get('response_status') == 200
+            for record in observer.records if record.get('request', '').split(' ', 1)[0] in ('SETUP', 'TEARDOWN'))
+    if observer:
         print('Observed requests:', [record.get('request', record.get('error')) for record in observer.records])
     transport_ok = result.get('result', {}).get('success')
     if args.stage == 'network' and network_ok and not result.get('error') and result.get('result', {}).get('hex') == '0xe00002eb':
         print('AirPlay setup response sent; the final USB read was aborted. See captured requests and decoder.json for streaming results.')
         transport_ok = True
     decoder = json.loads((out / 'decoder.json').read_text()) if (out / 'decoder.json').exists() else {}
+    stream_decoders = [{"directory": str(path.parent.relative_to(out)), **json.loads(path.read_text())}
+                       for path in sorted(out.glob('**/stream-*/decoder.json'))]
+    if stream_decoders:
+        decoder = dict(frames_decoded=sum(d.get('frames_decoded', 0) for d in stream_decoders),
+                       decode_errors=sum(d.get('decode_errors', 0) for d in stream_decoders))
+        summary = dict(**decoder, streams=stream_decoders)
+        (out / 'video-summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+        print('All video streams:', json.dumps(summary))
     preview_ok = not args.preview or (decoder.get('frames_decoded', 0) > 0 and decoder.get('decode_errors') == 0)
     return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok and preview_ok else 3
 
