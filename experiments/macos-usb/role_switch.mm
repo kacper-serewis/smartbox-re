@@ -4,6 +4,7 @@
 #import <IOKit/IOKitLib.h>
 #include <libusb.h>
 #include <cstring>
+#include <cstdlib>
 #import <mach/mach_error.h>
 #include <chrono>
 #include <csignal>
@@ -108,7 +109,16 @@ static io_service_t managerForDongle() {
 }
 int main(int argc, const char **argv) {
     @autoreleasepool {
-        bool changeMac = argc == 2 && !strcmp(argv[1], "--switch-with-mac-role");
+        bool changeMac = (argc == 2 || argc == 4) && !strcmp(argv[1], "--switch-with-mac-role");
+        unsigned holdSeconds = 15;
+        if (argc == 4 && changeMac) {
+            char *end = nullptr;
+            long parsed = strtol(argv[3], &end, 10);
+            if (strcmp(argv[2], "--hold-seconds") || !end || *end || parsed < 15 || parsed > 45) {
+                fprintf(stderr, "Hold duration must be 15..45 seconds\n"); return 2;
+            }
+            holdSeconds = unsigned(parsed);
+        }
         bool change = changeMac || (argc == 2 && !strcmp(argv[1], "--switch"));
         bool capabilities = argc == 2 && !strcmp(argv[1], "--capabilities");
         bool checkMac = argc == 2 && !strcmp(argv[1], "--check-mac-access");
@@ -208,7 +218,7 @@ int main(int argc, const char **argv) {
                             NSMutableArray *observed = [NSMutableArray array];
                             if (!code) {
                                 auto start = std::chrono::steady_clock::now();
-                                while (!interrupted && std::chrono::steady_clock::now() - start < std::chrono::seconds(15)) {
+                                while (!interrupted && std::chrono::steady_clock::now() - start < std::chrono::seconds(holdSeconds)) {
                                     io_service_t dc = IORegistryEntryFromPath(kIOMainPortDefault, controllerPath.UTF8String);
                                     NSMutableDictionary *s = dc ? [properties(dc)[@"CurrentState"] mutableCopy] : nil;
                                     [s removeObjectForKey:@"DSTS"];
@@ -220,6 +230,7 @@ int main(int argc, const char **argv) {
                                 }
                             } else status = 3;
                             report[@"mac_role_observations"] = observed;
+                            report[@"hold_seconds"] = @(holdSeconds);
                             // Restore even if the mode request returned an error: it may have side effects.
                             mode = 2; count = 0;
                             code = IOConnectCallScalarMethod(managerConnection, 1, &mode, 1, nullptr, &count);

@@ -18,9 +18,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true', help='Publish, probe the owned dongle, and restore using native administrator dialogs')
     parser.add_argument('--stage', choices=('detect', 'syn', 'control', 'auth', 'identify', 'network'), default='control')
+    parser.add_argument('--seconds', type=int, default=15, help='USB role hold duration, 15..45 seconds (network stage)')
     parser.add_argument('--preview', action='store_true', help='Decode the USB screen and open a loopback-only browser preview for five minutes')
     parser.add_argument('--collect-network', action='store_true', help='Read the owned dongle network/log state over its Wi-Fi during identification')
     args = parser.parse_args()
+    if not 15 <= args.seconds <= 45 or (args.seconds != 15 and args.stage != 'network'):
+        parser.error('--seconds must be 15..45 and custom durations require --stage network')
     if args.preview and (not args.run or args.stage != 'network'):
         parser.error('--preview requires --run --stage network')
     if args.collect_network and (not args.run or args.stage not in ('identify', 'network')):
@@ -42,6 +45,10 @@ def main():
         manifest[source] = hashlib.sha256((src / source).read_bytes()).hexdigest()
     for name in ('IAP2Probe.h', 'IAP2AuthProbe.h', 'DescriptorValidation.h', 'FoundationNodes.h'):
         manifest[name] = hashlib.sha256((src / name).read_bytes()).hexdigest()
+    for name in ('mac_usb_session_probe.py', 'mac_carplay_auth.py', 'mac_carplay_observer.py',
+                 'mac_carplay_media.py', 'mac_carplay_video.py', 'mac_headunit_preview.py'):
+        manifest['scripts/' + name] = hashlib.sha256((ROOT / 'scripts' / name).read_bytes()).hexdigest()
+    manifest['experiments/mirroring/preview.swift'] = hashlib.sha256((ROOT / 'experiments/mirroring/preview.swift').read_bytes()).hexdigest()
     (out / 'sources.json').write_text(json.dumps(manifest, indent=2) + '\n')
 
     def invoke(name, flags=(), admin=False):
@@ -102,7 +109,7 @@ def main():
         if args.stage == 'network':
             credentials.append(str(out / 'network-ready.json'))
         with (out / 'listen.json').open('w') as output, (out / 'listen.stderr').open('w') as errors:
-            listener = subprocess.Popen([str(out / 'interface'), flag, '30', *credentials], stdout=output, stderr=errors)
+            listener = subprocess.Popen([str(out / 'interface'), flag, str(max(30, args.seconds + 10)), *credentials], stdout=output, stderr=errors)
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and listener.poll() is None:
                 if 'READY:' in (out / 'listen.stderr').read_text():
@@ -111,11 +118,11 @@ def main():
             if 'READY:' not in (out / 'listen.stderr').read_text():
                 raise RuntimeError('Interface was not ready; role switch not sent')
             with (out / 'role.json').open('w') as output, (out / 'role.stderr').open('w') as errors:
-                role = subprocess.Popen([str(out / 'role'), '--switch-with-mac-role'], stdout=output, stderr=errors)
+                role = subprocess.Popen([str(out / 'role'), '--switch-with-mac-role', '--hold-seconds', str(args.seconds)], stdout=output, stderr=errors)
                 if args.stage in ('identify', 'network'):
                     if args.stage == 'network':
                         from mac_carplay_observer import USBObserver
-                        observer = USBObserver(out, (cert.read_bytes(), key.read_bytes()))
+                        observer = USBObserver(out, (cert.read_bytes(), key.read_bytes()), seconds=args.seconds - 3)
                         print(f'USB-only bench receiver: [{observer.host}%{observer.name}]:{observer.port}', flush=True)
                     else:
                         time.sleep(3)
@@ -128,8 +135,8 @@ def main():
                         recovery = Recovery('http://192.168.5.1', diagnostics, 'smartBox-9302')
                         recovery.check_identity()
                         recovery.diagnostic('ifconfig; cat /proc/net/route; cat /proc/net/if_inet6; cat /tmp/logs/app.log')
-                role.wait(timeout=25)
-            listener.wait(timeout=35)
+                role.wait(timeout=args.seconds + 10)
+            listener.wait(timeout=args.seconds + 20)
     finally:
         if observer:
             observer.close()
@@ -171,7 +178,9 @@ def main():
     if args.stage == 'network' and network_ok and not result.get('error') and result.get('result', {}).get('hex') == '0xe00002eb':
         print('AirPlay setup response sent; the final USB read was aborted. See captured requests and decoder.json for streaming results.')
         transport_ok = True
-    return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok else 3
+    decoder = json.loads((out / 'decoder.json').read_text()) if (out / 'decoder.json').exists() else {}
+    preview_ok = not args.preview or (decoder.get('frames_decoded', 0) > 0 and decoder.get('decode_errors') == 0)
+    return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok and preview_ok else 3
 
 
 if __name__ == '__main__':

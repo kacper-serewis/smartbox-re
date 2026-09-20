@@ -85,8 +85,12 @@ int main() {
         timeMessage.insert(timeMessage.end(), timeBody.begin(), timeBody.end());
         auto update = packet(5, 4, timeMessage);
         out.clear(); assert(probe.feed(update.data(), update.size(), out)); assert(out.size() == 1);
+        auto metadata = packet(6, 4, message(0x4e09, {'B','e','n','c','h',0}));
+        out.clear(); assert(probe.feed(metadata.data(), metadata.size(), out)); assert(out.size() == 1);
+        auto language = packet(7, 4, message(0x4e0a, {'e','n',0}));
+        out.clear(); assert(probe.feed(language.data(), language.size(), out)); assert(out.size() == 1);
         timeMessage.back() = 0; timeMessage[timeMessage.size()-3] = 3; // unknown parameter tag
-        auto badUpdate = packet(6, 4, timeMessage);
+        auto badUpdate = packet(8, 4, timeMessage);
         out.clear(); assert(!probe.feed(badUpdate.data(), badUpdate.size(), out));
     }
 }

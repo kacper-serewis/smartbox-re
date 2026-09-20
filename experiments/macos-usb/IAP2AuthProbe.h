@@ -157,6 +157,12 @@ private:
                 pos += n;
             }
             availabilityReceived = true;
+        } else if ((id == 0x4e09 || id == 0x4e0a || id == 0x4e0c) && identificationAccepted) {
+            // Device name/language/UUID metadata. Observe only; no Mac settings change.
+            if (body.empty() && id != 0x4e0c) return true;
+            if (body.size() < 5 || body.size() > 260 || be16(body.data()) != body.size()
+                || be16(body.data() + 2) != 0 || body.back() != 0)
+                return fail("Invalid device metadata parameter");
         } else if (id == 0x4e0b && identificationAccepted) {
             // DeviceTimeUpdate: acknowledge delivery, never change the Mac clock.
             size_t pos = 0; unsigned seen = 0;

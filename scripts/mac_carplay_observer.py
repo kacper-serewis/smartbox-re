@@ -37,7 +37,10 @@ def usb_endpoint():
 
 
 class USBObserver:
-    def __init__(self, output, identity=None):
+    def __init__(self, output, identity=None, seconds=12):
+        if not 1 <= seconds <= 42:
+            raise ValueError("Receiver duration must be 1..42 seconds")
+        self.seconds = seconds
         self.output = output
         self.identity = identity
         self.media = None
@@ -71,7 +74,7 @@ class USBObserver:
             temporary.replace(self.output / 'network-requests.json')
 
     def serve(self):
-        self.deadline = time.monotonic() + 12
+        self.deadline = time.monotonic() + self.seconds
         try:
             while not self.stop.is_set() and time.monotonic() < self.deadline:
                 try:
@@ -100,7 +103,7 @@ class USBObserver:
             with connection:
                 connection.settimeout(0.2)
                 pending = b''
-                for _ in range(32):
+                for _ in range(256):
                     frame, pending = read_request(connection, pending, deadline, self.stop)
                     if frame is None:
                         break

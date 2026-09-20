@@ -180,8 +180,9 @@ and verifying host-mode restoration, the original descriptor, and release-off.
 The later `--stage auth` and `--stage identify` probes generate a local test
 certificate/key and have received authentication success and identification
 acceptance from this owned HW501. They require no MFi key from the car and make
-no firmware changes. The network stage adds a USB-bound request observer; it
-is still not a video receiver. See the [evidence and protocol limits](../../reports/overlay/mac-auth-analysis/README.md).
+no firmware changes. The network stage now receives and decodes the dongle video output. Use
+`.venv/bin/python scripts/mac_usb_session_probe.py --run --stage network --preview --seconds 45`
+for a bounded browser preview; see the [preview guide](../../reports/overlay/mac-auth-analysis/HEADUNIT-PREVIEW.md). See the [evidence and protocol limits](../../reports/overlay/mac-auth-analysis/README.md).
 
 ```sh
 python3 scripts/mac_usb_session_probe.py --run --stage identify --collect-network

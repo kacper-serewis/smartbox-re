@@ -1,3 +1,9 @@
+# Update: working Mac head-unit video preview
+
+The USB receiver now captures and decodes the dongle pairing screen and iPhone
+CarPlay output. See [the preview guide and validation](HEADUNIT-PREVIEW.md).
+The request-observer-only limitations below describe the earlier investigation.
+
 # Mac receiver authentication and identification
 
 Tested on the owned smartBox-9302, HW501 app 131/build 2026081801, on
