@@ -1,0 +1,1 @@
+../components/tools/scripts/smartbox_paths.py

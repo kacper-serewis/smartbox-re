@@ -1,5 +1,0 @@
-{
-  global: AirPlayReceiverServerControl; CarPlayControlClientStart;
-          lv_label_set_text; lv_timer_handler;
-  local: *;
-};

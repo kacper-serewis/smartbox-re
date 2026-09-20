@@ -1,0 +1,1 @@
+../components/tools/scripts/test_smartbox_paths.py

@@ -1,0 +1,1 @@
+../components/tools/scripts/firmware_common.py
