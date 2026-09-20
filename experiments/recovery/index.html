@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>SmartBox recovery</title>
+<style>body{font:17px system-ui;max-width:680px;margin:3rem auto;padding:0 1rem;color:#183044}button{padding:.7rem;margin:.4rem 0}pre{white-space:pre-wrap;background:#eef3f6;padding:1rem}a{color:#125699}</style>
+<h1>SmartBox recovery</h1>
+<p>This page is available through your SSH connection. Keep the adapter powered during recovery.</p>
+<pre id="status">Loading status…</pre>
+<p><a href="/logs" download="smartbox-recovery.txt">Download recovery log</a></p>
+<button id="disable">Disable experimental features for the next boot</button>
+<p>Preparing a restore stops CarPlay and starts the stock updater. It does not upload or flash firmware.</p>
+<button id="prepare">Prepare firmware restore</button>
+<p>After preparation, use the repository update tool with a verified HW501 release and the forwarded updater port. Reboot after the update completes. Installing stock firmware removes this recovery service.</p>
+<button id="reboot">Reboot into stock mode</button>
+<pre id="result" role="status"></pre>
+<script>
+const result=document.getElementById('result');
+async function status(){try{document.getElementById('status').textContent=await(await fetch('/status')).text()}catch(e){document.getElementById('status').textContent='Recovery connection unavailable'}}
+for(const action of ['disable','prepare','reboot'])document.getElementById(action).onclick=async()=>{
+ if(action!=='disable'&&!confirm(action==='prepare'?'Stop CarPlay and prepare firmware restore?':'Reboot into stock mode now?'))return;
+ try{const r=await fetch('/'+action,{method:'POST',headers:{'X-SmartBox-Recovery':'1'}});result.textContent=await r.text()}catch(e){result.textContent='Connection closed; check the adapter before retrying'}status();
+};status();setInterval(status,5000);
+</script></html>
