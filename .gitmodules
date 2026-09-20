@@ -1,0 +1,18 @@
+[submodule "components/tools"]
+	path = components/tools
+	url = https://github.com/kacper-serewis/smartbox-tools.git
+[submodule "components/density"]
+	path = components/density
+	url = https://github.com/kacper-serewis/smartbox-density.git
+[submodule "components/sony-audio"]
+	path = components/sony-audio
+	url = https://github.com/kacper-serewis/smartbox-sony-audio.git
+[submodule "components/mac-usb"]
+	path = components/mac-usb
+	url = https://github.com/kacper-serewis/smartbox-mac-usb.git
+[submodule "components/emulation"]
+	path = components/emulation
+	url = https://github.com/kacper-serewis/smartbox-emulation.git
+[submodule "components/mirroring"]
+	path = components/mirroring
+	url = https://github.com/kacper-serewis/smartbox-mirroring.git
