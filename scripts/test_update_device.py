@@ -1,5 +1,8 @@
 """Check update protocol guards without contacting or modifying an adapter."""
 import base64
+import hashlib
+import json
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 import update_device
@@ -52,6 +55,15 @@ class UpdateTests(unittest.TestCase):
         device=FakeDevice()
         with patch.object(device,'request',return_value={'version':128,'percent':100}):
             with self.assertRaises(ValueError): update_device.apply(device,131)
+
+    def test_withdrawn_archive_rejected_by_content(self):
+        raw = b'withdrawn test image'
+        digest = hashlib.sha256(raw).hexdigest()
+        with patch.object(Path, 'read_text', return_value=json.dumps({'version':131})), \
+             patch.object(Path, 'read_bytes', return_value=raw), \
+             patch.dict(update_device.WITHDRAWN_ARCHIVES, {digest:'updater conflict'}):
+            with self.assertRaisesRegex(ValueError, 'Withdrawn firmware.*updater conflict'):
+                update_device.load_release(Path('example'))
 
 
 if __name__=='__main__': unittest.main()

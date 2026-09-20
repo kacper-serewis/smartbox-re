@@ -11,6 +11,11 @@ import tarfile
 import time
 from urllib.request import Request, ProxyHandler, build_opener
 
+WITHDRAWN_ARCHIVES = {
+    '9bbc62e44225839cbf18d1f5c60a23f26d4d534714785a987f372081d62a58a8':
+        'The experimental supervisor can terminate the stock updater during flashing. '
+        'Do not install this build on another adapter.'
+}
 
 class Device:
     def __init__(self, base, snapshot):
@@ -38,7 +43,10 @@ def load_release(folder):
     metadata = json.loads((folder/'manifest.json').read_text())
     version = metadata['version']
     raw = (folder/f'hw501_{version}.tar').read_bytes()
-    if hashlib.sha256(raw).hexdigest() != metadata['sha256'] or len(raw) != metadata['size']:
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest in WITHDRAWN_ARCHIVES:
+        raise ValueError('Withdrawn firmware: ' + WITHDRAWN_ARCHIVES[digest])
+    if digest != metadata['sha256'] or len(raw) != metadata['size']:
         raise ValueError('Archive hash or size mismatch')
     with tarfile.open(fileobj=io.BytesIO(raw), mode='r:') as tf:
         if sorted(m.name for m in tf.getmembers()) != ['app.img','appmd5sum.txt']:

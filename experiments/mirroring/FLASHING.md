@@ -1,5 +1,13 @@
 # Experimental HW501 mirroring image
 
+**Withdrawn on 20 September 2026:** the archive with SHA-256
+`9bbc62e44225839cbf18d1f5c60a23f26d4d534714785a987f372081d62a58a8`
+contains supervisor cleanup that can kill the stock updater. Do not install it.
+The local updater now rejects this archive by its actual content hash. See the
+[investigation](../../reports/overlay/updater-supervisor-conflict.md). A source fix
+has passed native/RV32 tests; recovery of the already affected adapter remains
+unverified. The build/flash instructions below describe the withdrawn image.
+
 For the step-by-step car-side procedure, use the [offline user guide](USER_GUIDE.md).
 
 The local update is built at:
@@ -42,11 +50,13 @@ not needed. Replug after confirmed completion and reconnect to its Wi-Fi.
 If receiver initialization fails, the service attempts cleanup and CarPlay
 fallback. The selected mode is preserved and the page reports the fallback.
 An external supervisor now also detects app termination (including fatal signals
-and failed exec), kills its remaining process-group helpers, disables the
+and failed exec), disables the
 mirroring library persistently, and launches the density-patched original app.
 The settings page runs as a separate supervised process and reports recovery.
 The original app gets at most three launch attempts; if it also keeps failing,
 retries stop and the page remains available if its own service can run.
+The corrected source terminates only the application PID, preserving the vendor
+updater helper. The withdrawn archive still contains the earlier group cleanup.
 
 A missing integration socket after 15 seconds also triggers recovery. A
 persistent boot-pending flag protects the first 30 seconds: if startup is

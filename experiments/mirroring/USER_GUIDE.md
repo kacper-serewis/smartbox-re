@@ -1,5 +1,21 @@
 # HW501: first mirroring test, offline
 
+**20 September: the image identified below is withdrawn. Do not follow its flash
+instructions.** Physical tests on smartBox-9302 showed corrupted mirroring and
+subsequent update disconnections at 1–3%. The supervisor's process-group cleanup
+can kill the stock updater; this conflict was reproduced locally. A source fix
+has passed regression tests but is not installed on the affected adapter.
+Recovery is not yet verified. Keep the recovery latch in place and collect:
+
+```sh
+python3 scripts/collect_device.py --mirroring --seconds 10
+```
+
+This reads mode, receiver, and update status and requests the diagnostic archive;
+it does not start flashing. It also works while mirroring is disabled in recovery.
+See [the investigation](../../reports/overlay/updater-supervisor-conflict.md).
+The procedure below is retained as historical build documentation.
+
 For your Opel Corsa 2017, HW501 adapter, and Mac. Use the spare adapter for this
 first test. The firmware includes v131, density137.5, a CarPlay/Screen Mirroring
 selector, and crash recovery. It has passed offline checks, including 22
@@ -165,25 +181,27 @@ these commands and record the observed behaviour for recovery investigation.
 
 ## 9. Save results before leaving the car
 
-From the same repository directory, these commands save the two new status APIs:
+From the same repository directory, collect while the phone is mirroring and the
+problem is visible. Keep the Mac connected to the adapter Wi-Fi:
 
 ```sh
-MIRROR_REPORT="device-snapshots/mirroring-check-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$MIRROR_REPORT"
-curl --noproxy '*' --connect-timeout 3 --max-time 10 -fsS \
-  http://192.168.5.1:8081/api/mode -o "$MIRROR_REPORT/mode.json"
-curl --noproxy '*' --connect-timeout 3 --max-time 10 -fsS \
-  http://192.168.5.1:8081/api/mirror -o "$MIRROR_REPORT/mirror.json"
+python3 scripts/collect_device.py --mirroring --seconds 30
 ```
 
-If the regular device endpoints are working, also collect the usual diagnostics:
+The collector saves locally and does not upload logs to the vendor. This option
+samples `/api/mode` and `/api/mirror` on port 8081 alongside the regular device
+information, then downloads the diagnostic archive if the main application is
+reachable. It also preserves mode status when only the recovery page responds.
+The summary includes receiver frame counts and reported dimensions; the filtered
+log includes video configuration and send errors. Increasing frame counts mean
+the bridge submitted frames, not that the head unit decoded them correctly.
 
-```sh
-python3 scripts/collect_device.py --seconds 30
-```
-
-The collector saves locally and does not upload logs to the vendor. It does not
-automatically collect the two new APIs, which is why they are saved separately.
+For corruption over the welcome screen, leave the phone in one orientation and
+mirror moving content during collection. Note whether rotating the phone or
+stopping and restarting mirroring changes the symptom, but collect the original
+failure first. The old screen remaining visible alone does not prove that two
+streams are being sent: decoder configuration or reference-frame problems can
+also leave old content on screen.
 
 Record whether ordinary CarPlay worked, whether **SmartBox Mirror** appeared,
 whether PIN pairing completed, what appeared on the car screen, and whether the

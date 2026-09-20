@@ -150,6 +150,30 @@ exec sleep 60
         self.assertFalse((STATE / 'recovery-disabled').exists())
         self.assertFalse((STATE / 'boot-pending').exists())
 
+    def updater_helper(self, signal_app):
+        helper = BASE / 'mock-updater'
+        helper.write_text('#!/bin/sh\n'
+            + 'echo started > ' + str(BASE / 'updater-started') + '\n'
+            + ('kill -TERM "$1"\n' if signal_app else '')
+            + 'sleep 0.5\n'
+            + 'echo survived > ' + str(BASE / 'updater-survived') + '\n')
+        helper.chmod(0o755)
+        # The updater must remain in the application's process group, just like
+        # the real UpdateServer started by the vendor's system("... &") call.
+        self.payload(str(helper) + ' "$$" &\n touch ' + str(RUNTIME / 'smartbox-mirror.sock'))
+
+    def test_updater_survives_vendor_app_exit(self):
+        self.updater_helper(signal_app=True)
+        self.start()
+        self.until(lambda: (STATE / 'recovery-disabled').exists())
+        self.until(lambda: (BASE / 'updater-survived').exists())
+
+    def test_updater_survives_supervisor_shutdown(self):
+        self.updater_helper(signal_app=False)
+        self.start(); self.until(lambda: (BASE / 'updater-started').exists())
+        self.proc.terminate(); self.proc.wait(timeout=5)
+        self.until(lambda: (BASE / 'updater-survived').exists())
+
 
 def main():
     global COMMAND

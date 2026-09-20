@@ -119,6 +119,21 @@ static void terminate_group(pid_t pid) {
     kill(-pid, SIGKILL); /* includes any remaining helpers in this group */
     while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
 }
+static void terminate_app(pid_t pid) {
+    if (pid <= 0) return;
+    /* The vendor launches /tmp/UpdateServer through system("... &"). It
+     * inherits this process group and must outlive CPAAProxyEx during flashing.
+     * Never apply process-group cleanup to the vendor application. */
+    kill(pid, SIGTERM);
+    double end = now() + 1;
+    while (now() < end) {
+        pid_t result = waitpid(pid, NULL, WNOHANG);
+        if (result == pid || (result < 0 && errno == ECHILD)) return;
+        tick();
+    }
+    kill(pid, SIGKILL);
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+}
 int main(int argc, char **argv) {
     const char *name = strrchr(argv[0], '/'); name = name ? name + 1 : argv[0];
     if (!strcmp(name, "smartbox-mode-driver")) return driver(argc, argv);
@@ -146,7 +161,7 @@ int main(int argc, char **argv) {
         const char *reason = "app_exit";
         if (app > 0) {
             pid_t exited = waitpid(app, &status, WNOHANG);
-            if (exited == app) { kill(-app, SIGKILL); app = -1; failed = 1; }
+            if (exited == app) { app = -1; failed = 1; }
             else if (exited < 0 && errno != EINTR) { failed = 1; reason = "wait_failed"; }
         }
         if (!recovery && !failed && t - started >= STARTUP_SECONDS && access(CONTROL_SOCKET, F_OK)) {
@@ -156,13 +171,13 @@ int main(int argc, char **argv) {
             /* Persist before retry: rebooting must not reload a known failing hook. */
             marker(RECOVERY_LATCH, reason);
             recovery = 1; attempts = 0;
-            terminate_group(app); app = -1;
+            terminate_app(app); app = -1;
             terminate_group(page); page = -1; page_attempts = 0;
             unlink(CONTROL_SOCKET);
             recovery_status(reason, status, attempts);
             retry_at = t + 0.25;
         } else if (recovery && failed && !retry_at) {
-            terminate_group(app); app = -1;
+            terminate_app(app); app = -1;
             if (attempts >= 3) {
                 retry_at = -1;
                 recovery_status("original_app_failed", status, attempts);
@@ -187,7 +202,7 @@ int main(int argc, char **argv) {
         }
         tick();
     }
-    terminate_group(page); terminate_group(app);
+    terminate_group(page); terminate_app(app);
     if (!recovery) unlink(BOOT_PENDING);
     unlink(CONTROL_SOCKET);
     close(lock);
