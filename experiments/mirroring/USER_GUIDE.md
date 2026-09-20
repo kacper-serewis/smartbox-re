@@ -5,7 +5,9 @@ instructions.** Physical tests on smartBox-9302 showed corrupted mirroring and
 subsequent update disconnections at 1–3%. The supervisor's process-group cleanup
 can kill the stock updater; this conflict was reproduced locally. A source fix
 has passed regression tests but is not installed on the affected adapter.
-Recovery is not yet verified. Keep the recovery latch in place and collect:
+smartBox-9302 has since been restored to density137.5, with flash readback and
+reboot verified. Do not reinstall this image. For another affected device,
+keep the recovery latch in place and collect:
 
 ```sh
 python3 scripts/collect_device.py --mirroring --seconds 10

@@ -5,8 +5,9 @@
 contains supervisor cleanup that can kill the stock updater. Do not install it.
 The local updater now rejects this archive by its actual content hash. See the
 [investigation](../../reports/overlay/updater-supervisor-conflict.md). A source fix
-has passed native/RV32 tests; recovery of the already affected adapter remains
-unverified. The build/flash instructions below describe the withdrawn image.
+has passed native/RV32 tests. smartBox-9302 was recovered to density137.5 through
+an independent updater, with flash readback and reboot verified. The build/flash
+instructions below describe the withdrawn image.
 
 For the step-by-step car-side procedure, use the [offline user guide](USER_GUIDE.md).
 

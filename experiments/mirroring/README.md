@@ -1,9 +1,64 @@
 # Screen mirroring receiver prototype
 
 This directory contains the Mac capture harness and an experimental RV32 device
-receiver/bridge. A validated update archive is available; see
-[flashing instructions](FLASHING.md). The device image has not yet been tested
-with an iPhone and Corsa. The Mac harness below captures compressed video locally.
+receiver/bridge. The experimental flash image is **withdrawn** after corrupted
+video and an updater/supervisor conflict on the physical adapter. The adapter
+has been recovered to density137.5; see the [investigation](../../reports/overlay/updater-supervisor-conflict.md).
+The Mac harness below captures compressed video locally.
+
+## Preview the dongle on the Mac without the car
+
+Live inspection of smartBox-9302 found no `/dev/fb0`, `/dev/disp`, or
+`/sys/class/graphics`. The phone video is compressed H.264, so this preview runs a
+standalone receiver on the dongle and decodes its captured packets on the Mac.
+It is not a screenshot of the dongle's welcome screen and does not exercise the
+Corsa's decoder, USB/MFi negotiation, or stock video-source handover.
+
+```sh
+python3 scripts/preview_dongle.py
+```
+
+The Mac and iPhone must be on the adapter Wi-Fi; the dongle can be powered by the
+Mac. The script checks the device identity, copies a bounded transfer helper and
+the receiver into `/tmp`, verifies their checksums, then opens a localhost preview
+page. Select **SmartBox Mirror Test** in iPhone Screen Mirroring; the PIN appears
+on the page when pairing starts. No firmware is flashed and the restored
+density137.5 app remains running. The capture receiver uses its own identity and
+dynamically allocated ports, alongside the existing app.
+
+The mirrored phone screen is recorded locally, including visible notifications.
+Audio is discarded. Limits: ten minutes total by default, two minutes after video
+starts, or 8 MiB of video, whichever comes first. Ctrl-C stops the receiver. A
+power cycle removes its temporary files. Do not start a firmware update during
+this test. Evidence, raw packets, decoder logs, and preview images are saved under
+`device-snapshots/dongle-preview-*`. The browser preview refreshes up to ten frames
+per second; this is a diagnostic viewer, not a latency benchmark.
+
+The full iPhone → physical dongle → Mac path worked on 20 September 2026. The
+phone supplied 332×720 portrait and 1200×552 landscape video despite the 800×480
+request. The live decoder passed 1,387 frames without an error at the recorded
+checkpoint. Evidence is in `device-snapshots/dongle-preview-20260920T121125.197999Z`.
+This validates receiving and decoding, not the Corsa output path. The Mac pipeline
+also decoded 72 generated transport-test frames with rotation changes and zero
+errors.
+
+Local build prerequisites (already built on this Mac):
+
+```sh
+swiftc -O experiments/mirroring/preview.swift \
+  -o firmwares/research/mirroring-build/mirror-preview
+docker run --rm --platform linux/amd64 --network none --read-only \
+  --tmpfs /tmp:rw,exec,nosuid,size=16m -v "$PWD:/work" \
+  smartbox-mirror-builder:local \
+  /work/firmwares/research/mirror-deps/riscv32-ilp32d--glibc--bleeding-edge-2021.11-1/bin/riscv32-buildroot-linux-gnu-gcc \
+  -Os -Wall -Wextra -Werror -Wl,--build-id=none -s \
+  -o /work/firmwares/research/recovery/ram-fetch /work/experiments/emulation/ram_fetch.c
+```
+
+Run the Docker command from this repository (the image works in `/work`). The
+existing receiver comes from `scripts/build_mirroring_riscv.py`. The transfer
+helper was tested under RV32/QEMU with fragmented TCP and rejected oversized
+transfers; the physical deployment independently checked both file digests.
 
 The receiver uses the protocol libraries from [UxPlay](https://github.com/FDH2/UxPlay),
 pinned to `57ea83411d5f7e0b38c5841987439340543f025c`. Its renderer and GStreamer
