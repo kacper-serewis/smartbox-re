@@ -36,11 +36,19 @@ per second; this is a diagnostic viewer, not a latency benchmark.
 
 The full iPhone → physical dongle → Mac path worked on 20 September 2026. The
 phone supplied 332×720 portrait and 1200×552 landscape video despite the 800×480
-request. The live decoder passed 1,387 frames without an error at the recorded
-checkpoint. Evidence is in `device-snapshots/dongle-preview-20260920T121125.197999Z`.
+request. The completed capture decoded 1,742 frames without an error.
+Evidence is in `device-snapshots/dongle-preview-20260920T121125.197999Z`.
 This validates receiving and decoding, not the Corsa output path. The Mac pipeline
 also decoded 72 generated transport-test frames with rotation changes and zero
 errors.
+
+Optional `--width`, `--height`, and `--fps` arguments change the advertised
+display request; they do not resize the received video. A second physical test
+using `--height 320` received 332×720 portrait and 1564×720 landscape video,
+decoding 1,648 frames without errors before reaching the capture byte limit.
+The last preview remains available until the total session timeout. See the
+[output investigation](../../reports/overlay/mirroring-output-investigation.md)
+for the comparison and the limits of the RV32 bridge replay.
 
 Local build prerequisites (already built on this Mac):
 
