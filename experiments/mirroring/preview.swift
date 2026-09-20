@@ -21,11 +21,20 @@ final class Preview {
     var decoded = 0
     var lastImage = 0.0
     var errors = 0
+    var width = 0
+    var height = 0
     init(_ path: String) { directory = URL(fileURLWithPath: path) }
+    func writeState() throws {
+        let state: [String: Any] = ["frames_decoded": decoded, "width": width,
+                "height": height, "decode_errors": errors]
+        try JSONSerialization.data(withJSONObject: state).write(to: directory.appendingPathComponent("decoder.json"), options: .atomic)
+    }
     func output(_ image: CVImageBuffer?, _ status: OSStatus) {
         lock.lock(); defer { lock.unlock() }
         guard status == noErr, let image else { errors += 1; return }
         decoded += 1
+        width = CVPixelBufferGetWidth(image)
+        height = CVPixelBufferGetHeight(image)
         let now = ProcessInfo.processInfo.systemUptime
         if now - lastImage < 0.1 { return }
         lastImage = now
@@ -34,9 +43,7 @@ final class Preview {
             guard let jpeg = context.jpegRepresentation(of: pixels, colorSpace: colorSpace,
                     options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.8]) else { return }
             try jpeg.write(to: directory.appendingPathComponent("frame.jpg"), options: .atomic)
-            let state: [String: Any] = ["frames_decoded": decoded, "width": CVPixelBufferGetWidth(image),
-                    "height": CVPixelBufferGetHeight(image), "decode_errors": errors]
-            try JSONSerialization.data(withJSONObject: state).write(to: directory.appendingPathComponent("decoder.json"), options: .atomic)
+            try writeState()
         } catch { fputs("Preview output: \(error)\n", stderr) }
     }
     func finish() {
@@ -45,6 +52,12 @@ final class Preview {
             VTDecompressionSessionInvalidate(session)
         }
         session = nil
+        lock.lock(); defer { lock.unlock() }
+        // Live JPEG updates are throttled; always persist the final counters.
+        if decoded > 0 || errors > 0 {
+            do { try writeState() }
+            catch { fputs("Preview final status: \(error)\n", stderr) }
+        }
     }
     func feed(_ packet: Packet) throws {
         if previous != packet.sps + packet.pps {

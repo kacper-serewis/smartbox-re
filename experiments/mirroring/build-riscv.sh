@@ -42,3 +42,7 @@ done
 "$CC" $CFLAGS $FLAGS $INC -rdynamic /work/experiments/mirroring/test_device_bridge.c -o test-device-bridge libmirror.a /build/prefix/lib/libplist-2.0.a -L/work/firmwares/hw501/131/rootfs/lib -Wl,--gc-sections -lcrypto -ldns_sd -lpthread -lm -ldl
 "$CC" $CFLAGS $FLAGS $INC /work/experiments/mirroring/replay_bridge.c -o replay-bridge libmirror.a /build/prefix/lib/libplist-2.0.a -L/work/firmwares/hw501/131/rootfs/lib -Wl,--gc-sections -lcrypto -ldns_sd -lpthread -lm -ldl
 riscv32-buildroot-linux-gnu-readelf --version-info mirror-capture
+
+"$CC" -O2 -fPIC -mno-relax -msmall-data-limit=0 -Wall -Wextra -Werror /work/experiments/mirroring/test_native_video.c -o test-native-video
+
+"$CC" $CFLAGS $FLAGS $INC -DSMARTBOX_NATIVE_TEST /work/experiments/mirroring/replay_bridge.c -o replay-native libmirror.a /build/prefix/lib/libplist-2.0.a -L/work/firmwares/hw501/131/rootfs/lib -Wl,--gc-sections -lcrypto -ldns_sd -lpthread -lm -ldl

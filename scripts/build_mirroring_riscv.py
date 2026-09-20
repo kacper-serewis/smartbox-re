@@ -65,7 +65,7 @@ def main():
     manifest['integration_sources'] = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                                        for p in sorted((ROOT / 'experiments/mirroring').iterdir())
                                        if p.suffix in ('.c', '.h', '.sh', '.map')}
-    for name in ('mirror-capture', 'test-capture', 'test-transport', 'libsmartbox-mirror.so', 'smartbox-launch'):
+    for name in ('mirror-capture', 'test-capture', 'test-transport', 'libsmartbox-mirror.so', 'smartbox-launch', 'test-native-video', 'test-device-bridge', 'replay-bridge', 'replay-native'):
         path = BUILD / name
         manifest['files'][name] = {'size': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
     (BUILD / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

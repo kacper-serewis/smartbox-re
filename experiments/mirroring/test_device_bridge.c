@@ -24,6 +24,7 @@ static void feed(const unsigned char *p, size_t n) {
     device_video(NULL, NULL, &data);
 }
 int main(void) {
+    native_bound = true;
     stock_control = record_control; stock_start = record_start; stock_video = record_frame;
     assert(command("probe mirroring\n") == 0);
     assert(command("start mirroring\n") != 0);
@@ -31,7 +32,7 @@ int main(void) {
     assert(CarPlayControlClientStart((void *)2) == 0 && controls == 1 && starts == 1);
     mirror_selected = true; native_ready = false;
     assert(AirPlayReceiverServerControl((void *)1, 1, "startServer", NULL, NULL, NULL) == 0 && controls == 1);
-    const unsigned char packet[] = {0,0,1,0x67,0x42,0,30, 0,0,0,1,0x68,0xee, 0,0,1,0x06,0x11, 0,0,1,0x65,0x99};
+    const unsigned char packet[] = {0x00,0x00,0x01,0x27,0x64,0x00,0x1f,0xac,0x13,0x14,0x50,0x32,0x0f,0x69,0xb8,0x08,0x68,0x30,0x36,0x82,0x21,0x19,0x60,0x00,0x00,0x00,0x01,0x68,0xee,0x00,0x00,0x01,0x06,0x11,0x00,0x00,0x01,0x65,0x99};
     feed(packet, sizeof(packet)); assert(configs == 0 && frames == 0);
     assert(CarPlayControlClientStart((void *)2) == 0 && starts == 1);
     feed(packet, sizeof(packet)); assert(configs == 1 && frames == 1);
@@ -40,13 +41,16 @@ int main(void) {
     const unsigned char predicted[] = {0,0,0,1,0x41,0x55};
     feed(predicted, sizeof(predicted)); assert(frames == 3);
     device_disconnect(NULL); feed(predicted, sizeof(predicted)); assert(frames == 3);
-    const unsigned char config[] = {0,0,1,0x67,0x42,0,31, 0,0,1,0x68,0xee};
+    const unsigned char config[] = {0x00,0x00,0x01,0x27,0x64,0x00,0x1e,0xac,0x13,0x14,0x50,0x32,0x0f,0x69,0xb8,0x08,0x68,0x30,0x36,0x82,0x21,0x19,0x60,0x00,0x00,0x01,0x68,0xee};
     feed(config, sizeof(config)); assert(configs == 2 && frames == 3);
     feed(predicted, sizeof(predicted)); assert(frames == 3);
     const unsigned char idr[] = {0,0,1,0x65,0x66};
     feed(idr, sizeof(idr)); assert(frames == 4);
     const unsigned char bad[] = {0,0,1,0x65,1,0,0,1};
     feed(bad, sizeof(bad)); assert(frames == 4);
+    const unsigned char slices[] = {0,0,0,1,0x65,0x12,0,0,0,1,0x65,0x34};
+    feed(slices, sizeof(slices)); assert(frames == 6 && last_length == 6);
+    assert(!memcmp(last_frame, "\0\0\0\1\x65\x34", 6));
     device_pin(NULL, "1234"); assert(!strcmp(pairing_pin, "1234"));
     device_pin(NULL, "x\"\n!"); assert(!strcmp(pairing_pin, "1234"));
     assert(command("stop mirroring\n") == 0);

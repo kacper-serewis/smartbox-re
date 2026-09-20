@@ -50,6 +50,15 @@ The last preview remains available until the total session timeout. See the
 [output investigation](../../reports/overlay/mirroring-output-investigation.md)
 for the comparison and the limits of the RV32 bridge replay.
 
+The corrected car-output bridge has passed isolated native-routine tests and
+replay of both recordings (3,390 decoded frames, zero errors). It sends new
+codec settings and actual source dimensions on rotation, waits for a keyframe,
+and keeps the welcome-screen encoder's dimensions unchanged. This candidate is
+built locally, **not flashed or verified in the Corsa**. The standalone browser
+preview above continues to test reception/Mac decoding; the final output test
+requires the head unit. Run `python3 scripts/test_native_video.py` after the
+RV32 build for the offline state and packet-format tests.
+
 Local build prerequisites (already built on this Mac):
 
 ```sh

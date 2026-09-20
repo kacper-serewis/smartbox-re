@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/un.h>
 #include "device_paths.h"
+#include "h264_size.h"
+#include "native_video_bind.h"
 
 typedef int (*control_fn)(void *, unsigned, const void *, const void *, const void *, void *);
 typedef int (*start_fn)(void *);
@@ -21,6 +23,7 @@ static frame_fn stock_video;
 static pthread_mutex_t mode_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t frame_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool mirror_selected, native_ready, stock_suppressed;
+static bool native_bound;
 static void *saved_server, *saved_client;
 static const void *saved_start_command;
 static raop_t *mirror_server;
@@ -62,8 +65,10 @@ static void device_dimensions(void *cls, float *sw, float *sh, float *w, float *
 static void device_disconnect(void *cls) {
     (void)cls;
     pthread_mutex_lock(&frame_lock);
+    native_video_release(&native_output);
     /* Avoid stop-event teardown of the shared car-side stream; return to waiting. */
     sps_len = pps_len = 0; config_sent = have_idr = false;
+    source_width = source_height = 0;
     pairing_pin[0] = 0; bridge_state = "waiting"; status_write();
     pthread_mutex_unlock(&frame_lock);
 }
@@ -87,7 +92,7 @@ static void device_video(void *cls, raop_ntp_t *ntp, video_decode_struct *data) 
     pthread_mutex_lock(&frame_lock);
     bool ready;
     pthread_mutex_lock(&mode_lock); ready = mirror_selected && native_ready; pthread_mutex_unlock(&mode_lock);
-    if (!ready || !stock_video) { bridge_state = "waiting_for_stock_app"; status_write(); goto done; }
+    if (!ready || !stock_video || !native_bound) { bridge_state = "waiting_for_stock_app"; status_write(); goto done; }
     const unsigned char *input = (void *)data->data;
     size_t n = data->data_len, width, pos = start_code(input, n, 0, &width), used = 0;
     unsigned char *frame = malloc(n * 2);
@@ -117,17 +122,46 @@ static void device_video(void *cls, raop_ntp_t *ntp, video_decode_struct *data) 
     }
     if (!bad && sps_len && pps_len) {
         if (!config_sent) {
+            unsigned w, h;
+            if (!h264_size(sps + 4, sps_len - 4, &w, &h)) {
+                have_idr = false; bridge_state = "unsupported_video"; goto release_frame;
+            }
             unsigned char config[8192];
             memcpy(config, sps, sps_len); memcpy(config + sps_len, pps, pps_len);
+#if defined(SMARTBOX_BRIDGE_TEST) && !defined(SMARTBOX_NATIVE_TEST)
             stock_video(2, config, (int)(sps_len + pps_len), true);
             config_sent = true;
+#else
+            config_sent = native_video_config(&native_output, config, (int)(sps_len + pps_len), w, h);
+#endif
+            have_idr = false;
+            if (!config_sent) { bridge_state = "waiting_for_car_video"; goto release_frame; }
+            source_width = w; source_height = h;
         }
         if (picture && (have_idr || idr)) {
-            stock_video(2, frame, (int)used, false);
+            /* Stock 0x4ee7c replaces only the leading Annex B start code with
+             * one AVCC length. Give it exactly one VCL NAL per call. */
+            size_t offset = 0;
+            while (offset < used) {
+                size_t next_width;
+                size_t end = start_code(frame, used, offset + 4, &next_width);
+                bool key = (frame[offset + 4] & 31) == 5;
+#if defined(SMARTBOX_BRIDGE_TEST) && !defined(SMARTBOX_NATIVE_TEST)
+                stock_video(2, frame + offset, (int)(end - offset), false);
+#else
+                if (!native_video_frame(&native_output, frame + offset, (int)(end - offset), key)) {
+                    config_sent = have_idr = false;
+                    bridge_state = "waiting_for_car_video"; goto release_frame;
+                }
+#endif
+                (void)key;
+                offset = end;
+            }
             have_idr = true; forwarded++; pairing_pin[0] = 0;
             bridge_state = "forwarding_unverified";
         }
     } else if (bad) bridge_state = "invalid_video";
+release_frame:
     free(frame);
     if (monotime() - last_status > 1) { last_status = monotime(); status_write(); }
 done:
@@ -218,12 +252,12 @@ int CarPlayControlClientStart(void *client) {
     return stock_start ? stock_start(client) : -1;
 }
 static int command(const char *line) {
-    if (!strcmp(line, "probe mirroring\n")) return stock_video && stock_control && stock_start ? 0 : -1;
+    if (!strcmp(line, "probe mirroring\n")) return native_bound && stock_video && stock_control && stock_start ? 0 : -1;
     if (!strcmp(line, "start mirroring\n")) {
         pthread_mutex_lock(&mode_lock);
         bool allowed = mirror_selected;
         pthread_mutex_unlock(&mode_lock);
-        return allowed ? start_receiver() : -1; /* switching is boot-only */
+        return allowed && native_bound ? start_receiver() : -1; /* switching is boot-only */
     }
     if (!strcmp(line, "stop mirroring\n")) { stop_receiver(); return 0; }
     if (!strcmp(line, "start carplay\n")) {
@@ -270,8 +304,9 @@ __attribute__((constructor)) static void integration_init(void) {
     stock_start = (start_fn)dlsym(RTLD_NEXT, "CarPlayControlClientStart");
     stock_video = (frame_fn)dlsym(RTLD_DEFAULT, "_Z21carplay_video_processiPvib");
     if (!stock_control || !stock_start || !stock_video) return;
+    native_bound = native_bind((void *)stock_video);
     FILE *f = fopen(MODE_FILE, "r"); char value[32] = {0};
-    if (f) { size_t n = fread(value, 1, sizeof(value) - 1, f); fclose(f); mirror_selected = n == 10 && !memcmp(value, "mirroring\n", 10); }
+    if (f) { size_t n = fread(value, 1, sizeof(value) - 1, f); fclose(f); mirror_selected = native_bound && n == 10 && !memcmp(value, "mirroring\n", 10); }
     int listener = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
     struct sockaddr_un address = {.sun_family = AF_UNIX}; strcpy(address.sun_path, CONTROL_SOCKET);
     if (listener < 0 || bind(listener, (void *)&address, sizeof(address)) || chmod(CONTROL_SOCKET, 0600) || listen(listener, 4)) {
