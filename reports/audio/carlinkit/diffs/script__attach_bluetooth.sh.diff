@@ -1,0 +1,45 @@
+--- 2022.01.24.1903/script/attach_bluetooth.sh
++++ 2022.06.08.1109/script/attach_bluetooth.sh
+@@ -17,7 +17,7 @@
+ 		if [ -e /usr/sbin/rtk_hciattach ]; then
+ 			rtk_hciattach -s 115200 ttymxc2 rtk_h5
+ 		fi
+-	elif [ "$sdioCardID" == "0x4354" ]; then
++	elif [ "$sdioCardID" == "0x4354" ] || [ "$sdioCardID" == "0x4335" ]; then
+ 		bcmBTFirmware=bcm4350.hcd
+ 		#attach bluetooth module
+ 		test -e /tmp/hci_uart.ko && insmod /tmp/hci_uart.ko
+@@ -33,13 +33,18 @@
+ 			#attach bluetooth module
+ 			test -e /tmp/hci_uart.ko && insmod /tmp/hci_uart.ko
+ 			if [ -e /usr/sbin/hciattach ]; then
+-				hciattach /dev/ttymxc2 any 115200 flow
++				#hciattach /dev/ttymxc2 any 115200 flow
++				#hciconfig hci0 up
++				#hcitool cmd 0x3f 0x0009 0xc0 0xc6 0x2d 0x00
++				#killall hciattach;sleep 2;rmmod hci_uart
++				#lsmod |grep hci_uart && (sleep 2;rmmod hci_uart)
++				#insmod /tmp/hci_uart.ko
++				hciattach /dev/ttymxc2 any 3000000 flow
+ 				hciconfig hci0 up
+-				hcitool cmd 0x3f 0x0009 0xc0 0xc6 0x2d 0x00
+-				killall hciattach;sleep 2;rmmod hci_uart
+-				lsmod |grep hci_uart && (sleep 2;rmmod hci_uart)
+-				insmod /tmp/hci_uart.ko
+-				hciattach /dev/ttymxc2 any 3000000 flow
++				# improve hfp voice quality 
++				hciconfig hci0 scomtu 240:32
++				# route sco data to hci
++				hcitool -i hci0 cmd 0x3f 0x1d 0x00
+ 			fi
+ 		fi
+ 	fi
+@@ -47,7 +52,7 @@
+ }
+ 
+ reset_bluetooth() {
+-	echo "Rest Bluetooth!!!"
++	echo "Reset Bluetooth!!!"
+ 	test -e /usr/sbin/rtk_hciattach && killall rtk_hciattach
+ 	test -e /usr/sbin/brcm_patchram_plus && killall brcm_patchram_plus
+ 	test -e /usr/sbin/hciattach && killall hciattach

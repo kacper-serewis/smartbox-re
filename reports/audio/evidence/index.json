@@ -1,0 +1,36 @@
+{
+  "source": "HW501 stock v131 bin/CPAAProxyEx",
+  "sha256": "a147d1b4fd2f73ed5a70b76c45cc5e5ca1aeaa8b1544d4aabc99b7a6618ecc84",
+  "ranges": [
+    {
+      "file": "media_mode_read.asm",
+      "start": "0x390d4",
+      "stop_exclusive": "0x39110"
+    },
+    {
+      "file": "media_mode_helper.asm",
+      "start": "0x34f8c",
+      "stop_exclusive": "0x34fa4"
+    },
+    {
+      "file": "media_format_selection.asm",
+      "start": "0x4d600",
+      "stop_exclusive": "0x4d684"
+    },
+    {
+      "file": "audio_start.asm",
+      "start": "0x3632c",
+      "stop_exclusive": "0x36480"
+    },
+    {
+      "file": "main_audio_resource.asm",
+      "start": "0x4e098",
+      "stop_exclusive": "0x4e110"
+    }
+  ],
+  "limitations": [
+    "Static analysis only; no failing Sony session captured.",
+    "Vendor Andes instructions remain undecoded.",
+    "Nearest exported symbol labels may not identify internal functions."
+  ]
+}

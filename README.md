@@ -31,6 +31,10 @@ the computer.
 
 ### Tools that can write or build firmware
 
+- [`build_sony_firmware.py`](scripts/build_sony_firmware.py) builds a fixed
+  Sony XAV-AX1005DB audio profile from stock HW501 v131. The
+  [experimental image](reports/audio/sony-build/README.md) passes offline
+  negotiation and package checks; boot and audible playback are untested.
 - [`update_device.py`](scripts/update_device.py) also has `stage` and `apply`
   actions. `stage` uploads an archive; `apply` requests a flash. Use them only
   with a verified release for the exact HW501 target. The tool explicitly rejects
