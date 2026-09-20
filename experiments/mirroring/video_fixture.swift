@@ -64,10 +64,10 @@ let decodeCallback: VTDecompressionOutputCallback = { opaque, _, status, _, imag
     result.decoded.append(["width": w, "height": h, "pixel_sum": sum])
 }
 
-func generate() -> [Frame] {
+func generate(_ sizes: [(Int, Int)] = [(800, 480), (480, 800), (800, 480)], count: Int = 24) -> [Frame] {
     let collector = Collector()
     let opaque = Unmanaged.passUnretained(collector).toOpaque()
-    for (width, height) in [(800, 480), (480, 800), (800, 480)] {
+    for (width, height) in sizes {
         var session: VTCompressionSession?
         check(VTCompressionSessionCreate(allocator: nil, width: Int32(width), height: Int32(height),
               codecType: kCMVideoCodecType_H264, encoderSpecification: nil, imageBufferAttributes: nil,
@@ -77,7 +77,7 @@ func generate() -> [Frame] {
         check(VTSessionSetProperty(encoder, key: kVTCompressionPropertyKey_AllowFrameReordering, value: kCFBooleanFalse), "reordering")
         check(VTSessionSetProperty(encoder, key: kVTCompressionPropertyKey_ProfileLevel, value: kVTProfileLevel_H264_Main_AutoLevel), "profile")
         check(VTCompressionSessionPrepareToEncodeFrames(encoder), "prepare")
-        for frame in 0..<24 {
+        for frame in 0..<count {
             var image: CVPixelBuffer?
             check(CVPixelBufferCreate(nil, width, height, kCVPixelFormatType_32BGRA,
                   [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &image), "pixels")
@@ -101,7 +101,7 @@ func generate() -> [Frame] {
         check(VTCompressionSessionCompleteFrames(encoder, untilPresentationTimeStamp: .invalid), "finish encoding")
         VTCompressionSessionInvalidate(encoder)
     }
-    precondition(collector.errors.isEmpty && collector.frames.count == 72)
+    precondition(collector.errors.isEmpty && collector.frames.count == sizes.count * count)
     return collector.frames
 }
 
@@ -158,6 +158,10 @@ precondition(CommandLine.arguments.count == 3, "video-fixture generate|decode FI
 let path = URL(fileURLWithPath: CommandLine.arguments[2])
 if CommandLine.arguments[1] == "generate" {
     try JSONEncoder().encode(generate()).write(to: path)
+} else if CommandLine.arguments[1] == "generate-resolutions" {
+    let sizes = [(800, 480), (480, 800), (1024, 600), (1280, 720), (1600, 900),
+                 (1920, 1080), (720, 1280), (1080, 1920), (1936, 1080), (1920, 1088), (800, 480)]
+    try JSONEncoder().encode(generate(sizes, count: 12)).write(to: path)
 } else {
     let frames = try JSONDecoder().decode([Frame].self, from: Data(contentsOf: path))
     let result = decode(frames)

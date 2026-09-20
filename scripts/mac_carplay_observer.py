@@ -46,6 +46,8 @@ class USBObserver:
         self.output = output
         self.identity = identity
         self.media = None
+        self.media_lock = threading.RLock()
+        self.media_count = 0
         self.clients = []
         self.save_lock = threading.Lock()
         self.peer = None
@@ -128,10 +130,17 @@ class USBObserver:
                             data = plistlib.loads(body)
                             if not isinstance(data, dict):
                                 raise ValueError('SETUP must be a dictionary')
-                            if self.media is None:
-                                self.media = BenchMedia(self.host, self.scope, peer[0], self.output, self.stop, deadline)
-                            result = (self.media.setup_streams(data) if 'streams' in data
-                                      else self.media.initial_setup(data, auth))
+                            with self.media_lock:
+                                if self.media is None:
+                                    self.media_count += 1
+                                    if self.media_count > 4:
+                                        raise ValueError('Media session limit reached')
+                                    media_output = self.output if self.media_count == 1 else self.output / ('media-%02d' % self.media_count)
+                                    media_output.mkdir(mode=0o700, exist_ok=True)
+                                    self.media = BenchMedia(self.host, self.scope, peer[0], media_output, self.stop, deadline)
+                                    self.media.preview_output = self.output
+                                result = (self.media.setup_streams(data) if 'streams' in data
+                                          else self.media.initial_setup(data, auth))
                             response = plistlib.dumps(result, fmt=plistlib.FMT_BINARY)
                             content_type = 'application/x-apple-binary-plist'
                             status = 200
@@ -155,7 +164,18 @@ class USBObserver:
                         except (ValueError, plistlib.InvalidFileException):
                             status = 400
                     if request.split()[0] == 'TEARDOWN' and self.media:
-                        status = 200
+                        try:
+                            data = plistlib.loads(body) if body else {}
+                            with self.media_lock:
+                                if self.media is None:
+                                    raise ValueError('No media session to tear down')
+                                self.media.teardown(data)
+                                if 'streams' not in data:
+                                    self.media = None
+                            status = 200
+                        except (OSError, ValueError, plistlib.InvalidFileException) as error:
+                            record['error'] = str(error)
+                            status = 400
                     if (request.split()[0] in ('RECORD', 'SET_PARAMETER') or request.split()[:2] == ['POST', '/feedback']) and self.media:
                         status = 200
                     version = request.split()[-1]
@@ -177,8 +197,9 @@ class USBObserver:
         self.stop.set()
         self.thread.join(timeout=3)
         self.socket.close()
-        if self.media:
-            self.media.close()
+        with self.media_lock:
+            if self.media:
+                self.media.close()
 
 
 def read_request(connection, pending, deadline, stop):

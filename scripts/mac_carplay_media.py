@@ -17,6 +17,11 @@ class BenchMedia:
         self.output, self.stop, self.deadline = output, stop, deadline
         self.sockets, self.threads, self.records = [], [], []
         self.key = None
+        self.closed = threading.Event()
+        self.streams = {}
+        self.stream_count = 0
+        self.is_stream = False
+        self.video_budget = dict(bytes=32*1024*1024, frames=1800)
 
     def bind(self, kind):
         sock = socket.socket(socket.AF_INET6, kind)
@@ -33,13 +38,14 @@ class BenchMedia:
             try:
                 target(*args)
             except (OSError, ValueError) as error:
-                self.records.append(dict(error=str(error), worker=target.__name__))
+                if self.active():
+                    self.records.append(dict(error=str(error), worker=target.__name__))
         thread = threading.Thread(target=worker, daemon=True)
         self.threads.append(thread)
         thread.start()
 
     def active(self):
-        return not self.stop.is_set() and time.monotonic() < self.deadline
+        return not self.stop.is_set() and not self.closed.is_set() and time.monotonic() < self.deadline
 
     def initial_setup(self, data, auth):
         if self.sockets:
@@ -58,31 +64,77 @@ class BenchMedia:
 
     def setup_streams(self, data):
         streams = data.get('streams')
-        if self.key is None or not isinstance(streams, list) or len(streams) != 1:
-            raise ValueError('Expected one screen stream after initial setup')
+        if self.key is None or self.closed.is_set() or not isinstance(streams, list) or len(streams) != 1:
+            raise ValueError('Expected one stream after initial setup')
         stream = streams[0]
-        if not isinstance(stream, dict):
+        if not isinstance(stream, dict) or type(stream.get('type')) is not int:
             raise ValueError('Invalid stream description')
-        if stream.get('type') in (100, 101) and stream.get('audioFormat') in (2048, 32768):
-            if getattr(self, 'audio_streams', 0) >= 2:
-                raise ValueError('Audio stream limit reached')
-            self.audio_streams = getattr(self, 'audio_streams', 0) + 1
-            data_socket, control_socket = self.bind(socket.SOCK_DGRAM), self.bind(socket.SOCK_DGRAM)
-            self.spawn(self.discard_audio, data_socket)
-            self.spawn(self.discard_audio, control_socket)
-            return dict(streams=[dict(type=stream['type'], dataPort=data_socket.getsockname()[1],
-                                      controlPort=control_socket.getsockname()[1])])
-        if stream.get('type') != 110:
+        kind = stream['type']
+        if kind in self.streams:
+            raise ValueError('Stream already started; TEARDOWN required')
+        if self.stream_count >= 16:
+            raise ValueError('Session stream setup limit reached')
+        if kind in (100, 101):
+            if stream.get('audioFormat') not in (2048, 32768):
+                raise ValueError('Unsupported audio format')
+        elif kind == 110:
+            stream_id = stream.get('streamConnectionID')
+            if type(stream_id) is not int or not -(1 << 63) <= stream_id < (1 << 64):
+                raise ValueError('Invalid stream connection ID')
+        else:
             raise ValueError('Unsupported bench stream format')
-        stream_id = stream.get('streamConnectionID')
-        if type(stream_id) is not int or not -(1 << 63) <= stream_id < (1 << 64):
-            raise ValueError('Invalid stream connection ID')
-        if getattr(self, 'screen_started', False):
-            raise ValueError('Screen stream already started')
-        self.screen_started = True
-        screen = self.bind(socket.SOCK_STREAM)
-        self.spawn(self.video, screen, stream_id & ((1 << 64) - 1))
-        return dict(streams=[dict(type=110, dataPort=screen.getsockname()[1])])
+        self.stream_count += 1
+        output = self.output / ('stream-%02d' % self.stream_count)
+        output.mkdir(mode=0o700)
+        group = BenchMedia(self.host, self.scope, self.peer, output, self.stop, self.deadline)
+        group.key, group.records, group.is_stream = self.key, self.records, True
+        group.preview_output = getattr(self, 'preview_output', self.output)
+        group.video_budget = self.video_budget
+        group.description = dict(stream)
+        self.streams[kind] = group
+        try:
+            if kind in (100, 101):
+                data_socket, control_socket = group.bind(socket.SOCK_DGRAM), group.bind(socket.SOCK_DGRAM)
+                group.spawn(group.discard_audio, data_socket)
+                group.spawn(group.discard_audio, control_socket)
+                result = dict(type=kind, dataPort=data_socket.getsockname()[1], controlPort=control_socket.getsockname()[1])
+            else:
+                screen = group.bind(socket.SOCK_STREAM)
+                group.spawn(group.video, screen, stream_id & ((1 << 64) - 1))
+                result = dict(type=110, dataPort=screen.getsockname()[1])
+            self.records.append(dict(event='stream_setup', type=kind, directory=output.name))
+            return dict(streams=[result])
+        except Exception:
+            group.close()
+            del self.streams[kind]
+            raise
+
+    def teardown(self, data):
+        if not isinstance(data, dict):
+            raise ValueError('TEARDOWN must be a dictionary')
+        if 'streams' not in data:
+            self.close()
+            return
+        streams = data['streams']
+        if not isinstance(streams, list) or len(streams) > 3:
+            raise ValueError('Invalid teardown stream list')
+        selected = []
+        for stream in streams:
+            if not isinstance(stream, dict) or type(stream.get('type')) is not int or stream['type'] not in (100, 101, 110):
+                raise ValueError('Invalid teardown stream description')
+            kind = stream['type']
+            group = self.streams.get(kind)
+            if group:
+                for key in ('uuid', 'streamConnectionID'):
+                    if key in stream and stream[key] != group.description.get(key):
+                        raise ValueError('Teardown stream identity mismatch')
+                if kind not in selected:
+                    selected.append(kind)
+        # Validate the whole request before stopping any stream.
+        for kind in selected:
+            self.streams[kind].close()
+            del self.streams[kind]
+            self.records.append(dict(event='stream_teardown', type=kind))
 
     def discard_audio(self, sock):
         packets, received = 0, 0
@@ -112,6 +164,7 @@ class BenchMedia:
                 continue
             if peer[0].split('%')[0] == self.peer and peer[3] == self.scope:
                 connection.settimeout(0.15)
+                self.sockets.append(connection)
                 return connection
             connection.close()
         return None
@@ -157,11 +210,22 @@ class BenchMedia:
         self.records.append(dict(timing_sent=sent, timing_received=received))
 
     def close(self):
-        for sock in self.sockets:
+        self.closed.set()
+        for group in self.streams.values():
+            group.close()
+        self.streams.clear()
+        for sock in list(self.sockets):
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
             sock.close()
         for thread in self.threads:
-            thread.join(timeout=0.5)
-        (self.output / 'media-events.json').write_text(json.dumps(self.records, indent=2) + '\n')
+            thread.join(timeout=5)
+        if any(thread.is_alive() for thread in self.threads):
+            raise ValueError('Stream worker did not stop; refusing replacement')
+        if not self.is_stream:
+            (self.output / 'media-events.json').write_text(json.dumps(self.records, indent=2) + '\n')
 
 
 def display_info():

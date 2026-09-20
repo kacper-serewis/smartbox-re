@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import select
+import shutil
 import subprocess
 import time
 import socket
@@ -112,35 +113,49 @@ def capture(connection, media, stream_id):
         return bytes(data) if len(data) == size else None
 
     config, frames, total = None, 0, 0
-    with closing(PreviewDecoder(media.output)) as preview, (media.output / 'screen-packets.jsonl').open('w') as decoded, (media.output / 'screen-wire.bin').open('wb') as wire:
-        while media.active() and frames < 1800 and total < 32*1024*1024:
-            header = read_exact(128)
-            if header is None:
-                break
-            length = struct.unpack('<I', header[:4])[0]
-            if length > 4*1024*1024 or total + length + 128 > 32*1024*1024:
-                raise ValueError('Screen capture size limit')
-            body = read_exact(length)
-            if body is None:
-                break
-            wire.write(header + body)
-            total += 128 + length
-            opcode = header[4]
-            if opcode == 1:
-                config = avcc_config(body)
-                media.records.append(dict(video_config_bytes=length, header_hex=header.hex()))
-            elif opcode == 0:
-                body = decryptor.update(body)
-                if config is None:
-                    raise ValueError('Video arrived before codec configuration')
-                nal_size, sps, pps = config
-                avcc = normalize_nals(body, nal_size)
-                line = json.dumps({k:base64.b64encode(v).decode('ascii')
-                                   for k,v in dict(sps=sps, pps=pps, avcc=avcc).items()}) + '\n'
-                decoded.write(line)
-                preview.send(line)
-                decoded.flush()
-                frames += 1
-            elif opcode not in (2, 4, 5):
-                raise ValueError(f'Unsupported screen opcode {opcode}')
-    media.records.append(dict(video_frames=frames, video_wire_bytes=total))
+    budget = getattr(media, "video_budget", dict(bytes=32*1024*1024, frames=1800))
+    preview_output = getattr(media, 'preview_output', media.output)
+    if (preview_output / 'screen-decoder').exists():
+        for name in ('decoder.json', 'frame.jpg'):
+            (preview_output / name).unlink(missing_ok=True)
+    try:
+        with closing(PreviewDecoder(getattr(media, 'preview_output', media.output))) as preview, (media.output / 'screen-packets.jsonl').open('w') as decoded, (media.output / 'screen-wire.bin').open('wb') as wire:
+            while media.active() and budget["frames"] > 0 and budget["bytes"] >= 128:
+                header = read_exact(128)
+                if header is None:
+                    break
+                length = struct.unpack('<I', header[:4])[0]
+                if length > 4*1024*1024 or length + 128 > budget["bytes"]:
+                    raise ValueError('Screen capture size limit')
+                body = read_exact(length)
+                if body is None:
+                    break
+                wire.write(header + body)
+                total += 128 + length
+                budget["bytes"] -= 128 + length
+                opcode = header[4]
+                if opcode == 1:
+                    config = avcc_config(body)
+                    media.records.append(dict(video_config_bytes=length, header_hex=header.hex()))
+                elif opcode == 0:
+                    body = decryptor.update(body)
+                    if config is None:
+                        raise ValueError('Video arrived before codec configuration')
+                    nal_size, sps, pps = config
+                    avcc = normalize_nals(body, nal_size)
+                    line = json.dumps({k:base64.b64encode(v).decode('ascii')
+                                       for k,v in dict(sps=sps, pps=pps, avcc=avcc).items()}) + '\n'
+                    decoded.write(line)
+                    preview.send(line)
+                    decoded.flush()
+                    frames += 1
+                    budget["frames"] -= 1
+                elif opcode not in (2, 4, 5):
+                    raise ValueError(f'Unsupported screen opcode {opcode}')
+    finally:
+        preview_output = getattr(media, 'preview_output', media.output)
+        if preview_output != media.output:
+            for name in ('decoder.json', 'decoder.log', 'frame.jpg'):
+                if (preview_output / name).exists():
+                    shutil.copy2(preview_output / name, media.output / name)
+        media.records.append(dict(video_frames=frames, video_wire_bytes=total, directory=media.output.name))
