@@ -1,5 +1,11 @@
 # macOS USB gadget access probe
 
+**Current revision: 0.2.0, reusable bridge protocol 3.** Use
+`python3 scripts/mac_usb_bridge.py` for read-only status and see
+[the reusable bridge guide](BRIDGE.md) for current commands. The old probe and
+the sections below document the earlier access investigation. The legacy
+`--kernel-check-access` command is not the protocol-3 client.
+
 This is an access test, not a CarPlay receiver. It targets the USB serial and
 VID/PID previously verified against smartBox-9302's own gadget configuration.
 It matches the host and device controllers through their shared `usb-drdN`
@@ -166,13 +172,41 @@ status was disconnected/off-bus. This does not establish configuration access.
 Evidence is in `device-snapshots/mac-usb-gadget-20260920T160628.454154Z`.
 
 Version 0.1.1 adds support for a lazy OSSerializer `CurrentState` property and
-reports `ProbeStateObjectType` / `ProbeReadiness`. The type hypothesis still
-needs confirmation on-device; the disconnected/off-bus requirement is preserved.
+reports `ProbeStateObjectType` / `ProbeReadiness`. The type hypothesis was
+subsequently confirmed on-device; the disconnected/off-bus requirement is preserved.
 Only the controller-owned state is parsed, with a 16 KiB parse-length limit.
 The current artifact was built with SDK 27.0, with guard tests passing.
 
 The installer now permits `--upgrade` only from the exact pinned 0.1.0 bundle,
 preserving it outside `/Library/Extensions` as
 `/Library/Application Support/SmartBoxUSBProbe/0.1.0.kext`. The 0.1.1 bundle is
-staged, but macOS again requires System Settings approval/reboot before it takes
-effect. The loaded 0.1.0 instance has not run the private configuration call.
+staged and then loaded after the user's approval/reboot.
+
+## Version 0.1.1 live result
+
+Evidence: `device-snapshots/mac-usb-gadget-20260920T161449.186683Z/kernel-test.json`.
+The loaded driver reports `ProbeVersion=2`, `ProbeReadiness=ready`, and
+`ProbeStateObjectType=OSSerializer`. The root request was accepted and the
+kernel worker invoked the configuration API, which returned `0xe00002e2`
+(`not permitted`). The descriptor remained unchanged and no role switch was
+sent. This confirms the readiness fix, not successful USB configuration or a
+working head-unit session. The instance's one-shot attempt has been consumed.
+
+The reference implementation sets `AllowMultipleCreates=true` when building
+configurations, with a comment explaining that this permits creation when the
+controller already has a device description. Our unchanged-descriptor test
+does not supply that flag. This is a plausible explanation for the new refusal,
+not a confirmed cause on macOS 27.2. The targeted system-log search returned no
+explicit explanation for the failed call.
+
+Before another installed driver revision, consolidate the required bridge
+operations and test configuration validation in user space. The user explicitly
+wants to avoid an approval/reboot cycle for each small experiment. No further
+driver update or security change was made after this result.
+
+Subsequent offline inspection of the installed kernelcache identified the
+matching `AllowMultipleCreates` rejection branch; see
+[the disassembly findings](../../reports/overlay/mac-usb-configuration-refusal.md).
+Version 0.2.0 implements the replacement flag and reusable commands described
+in [BRIDGE.md](BRIDGE.md). Successful hardware publication still needs testing
+after that revision loads.

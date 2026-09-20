@@ -1,13 +1,15 @@
 # Native Mac USB access test
 
 The user authorized the temporary Mac startup-security/SIP changes for this
-test. They require local action in Recovery; no further confirmation is needed
-for the agreed test. This guide does not mean those changes have happened.
+test. They have already completed Recovery preparation and loaded version
+0.1.1. Do not repeat Recovery preparation for a normal bridge upgrade. The
+instructions are retained for reference and eventual security restoration.
 
-The driver is only an access probe. It will not show CarPlay, publish a custom
-USB interface, or switch USB roles. Its code has compiled and its host-side guard
-tests pass, but it has never been loaded into the Mac kernel. A kernel failure
-can restart the Mac, so save open work before testing.
+The current 0.2.0 driver is a reusable configuration bridge. It can publish a
+validated USB description and restore the original, but does not implement
+role switching or CarPlay. Host tests pass; this revision still needs a live
+test. A kernel failure can restart the Mac, so save open work before testing.
+See [bridge commands and limits](BRIDGE.md).
 
 ## 1. Recovery preparation
 
@@ -47,13 +49,18 @@ sudo python3 scripts/install_mac_usb_probe.py --install
 sudo kmutil load -p /Library/Extensions/SmartBoxUSBProbe.kext
 ```
 
+For this Mac's existing pinned 0.1.1 installation, use `--upgrade` instead of
+`--install`. The installer backs it up as
+`/Library/Application Support/SmartBoxUSBProbe/0.1.1.kext`. The earlier 0.1.0
+backup is preserved separately.
+
 The installer only copies the bundle; `kmutil` requests its inclusion/loading.
 Follow any macOS approval prompt in **System Settings → Privacy & Security**
 and restart if required. If `kmutil` reports a signing, dependency, or policy
 error, save that output for inspection. Do not force loading with unrelated flags.
 Apple describes this [approval/reboot flow](https://developer.apple.com/documentation/apple-silicon/installing-a-custom-kernel-extension).
 
-## 3. Run the one-shot test
+## 3. Run the reusable bridge test
 
 First check whether the driver attached:
 
@@ -64,18 +71,20 @@ ioreg -r -c SmartBoxUSBProbe -l
 If it is present, build the client and print its evidence directory:
 
 ```sh
-python3 scripts/probe_mac_usb_gadget.py
+python3 scripts/mac_usb_bridge.py
 ```
 
-Run the **compiled `probe-mac-usb` helper in that printed directory**, with
-`sudo` and `--kernel-check-access`. It revalidates the owned dongle's identity,
-its physical port, and the attached driver before submitting the command.
+The report must show `ProbeVersion: "3"`. Run the **compiled `mac-usb-bridge`
+helper in that printed directory**, with `sudo` and `--republish`. It revalidates
+the owned dongle's identity, its physical port, and the driver protocol before
+submitting the command. Check `operation_result.success` and the resulting
+description. This adds the required `AllowMultipleCreates` controller flag.
 
-Success requires `kernel_configuration_result.success` true and
-`description_unchanged` true. API success still does not prove a role switch or
-CarPlay session. The driver allows only one accepted request per instance;
-do not retry blindly after a timeout. The five-second client timeout cannot
-cancel an already executing kernel call.
+API success still does not prove a role switch or CarPlay session. Run the same
+helper with `sudo` and `--restore` after the experiment; check both API success
+and `original_configuration_restored`. Requests are repeatable and matched by
+ID. Do not retry blindly after a timeout: the ten-second client timeout cannot
+cancel an already executing kernel call. Use `--status` to inspect completion.
 
 ## 4. Remove the test and restore security
 

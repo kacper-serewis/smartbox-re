@@ -14,12 +14,12 @@ SOURCE = ROOT / 'firmwares/research/mac-usb-probe/SmartBoxUSBProbe.kext'
 DESTINATION = Path('/Library/Extensions/SmartBoxUSBProbe.kext')
 # Pin the reviewed artifact, not a mutable manifest supplied by the caller.
 EXPECTED = {
-    'Contents/MacOS/SmartBoxUSBProbe': '27ce29c18f05284bad96e96f92cb86b30c76914bcbbc5f734992eca880887fd8',
-    'Contents/Info.plist': 'a78245c81eaf51923c89a8aaf8f454ae8a42c15331e1b0dfcdb6ae6991641a6b',
+    'Contents/MacOS/SmartBoxUSBProbe': '576b16135bd966ecf2b4cc2713098e9502e3ca53242c7a0615795c44b96192a5',
+    'Contents/Info.plist': '23a79e016305605f4602f4a311790c63629273bc27af5fb2d426b430b71254b7',
 }
 PREVIOUS = {
-    'Contents/MacOS/SmartBoxUSBProbe': '982131f02c6ffaa0aca02ca339ecba5f7a829fc0f8d84a4893a0a5655a984c4b',
-    'Contents/Info.plist': 'e04cb5102ecc8fd3b508b8f5efb94fb7cc0ce08c18a08599288c4ef372a5ca0d',
+    'Contents/MacOS/SmartBoxUSBProbe': '27ce29c18f05284bad96e96f92cb86b30c76914bcbbc5f734992eca880887fd8',
+    'Contents/Info.plist': 'a78245c81eaf51923c89a8aaf8f454ae8a42c15331e1b0dfcdb6ae6991641a6b',
 }
 
 
@@ -46,7 +46,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group()
     action.add_argument('--install', action='store_true')
-    action.add_argument('--upgrade', action='store_true', help='Replace only the pinned 0.1.0 build, preserving a backup')
+    action.add_argument('--upgrade', action='store_true', help='Replace only the pinned 0.1.1 build, preserving a backup')
     args = parser.parse_args()
     if platform.system() != 'Darwin':
         parser.error('This bundle targets macOS')
@@ -62,13 +62,13 @@ def main():
         except ValueError:
             verify(DESTINATION, PREVIOUS)
             previous = True
-            print('Installed bundle is the recognized previous version, 0.1.0.')
+            print('Installed bundle is the recognized previous version, 0.1.1.')
         else:
             print('An identical bundle is already installed; no files changed.')
             return
     if not args.install and not args.upgrade:
         if previous:
-            print('Verification only. Use --upgrade to stage the prepared 0.1.1 update.')
+            print('Verification only. Use --upgrade to stage the prepared 0.2.0 update.')
             return
         print('No installed bundle. Verification only; nothing copied or loaded.')
         return
@@ -88,7 +88,7 @@ def main():
         for path in [staged, *staged.rglob('*')]:
             os.chown(path, 0, 0)
             os.chmod(path, 0o755 if path.is_dir() or path.name == 'SmartBoxUSBProbe' else 0o644)
-        backup = Path('/Library/Application Support/SmartBoxUSBProbe/0.1.0.kext')
+        backup = Path('/Library/Application Support/SmartBoxUSBProbe/0.1.1.kext')
         if previous:
             verify(DESTINATION, PREVIOUS)
             backup.parent.mkdir(parents=True, exist_ok=True)

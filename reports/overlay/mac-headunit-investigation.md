@@ -106,7 +106,35 @@ still has 0.1.0, and 0.1.1 is not yet tested live. Evidence:
 
 Evidence: `device-snapshots/mac-usb-gadget-20260920T130157.961930Z`.
 
+## Kernel probe after the 0.1.1 reboot
+
+The user rebooted and version 0.1.1 loaded. The root request succeeded;
+`ProbeReadiness=ready` and `ProbeStateObjectType=OSSerializer` confirm the
+readiness fix. The underlying configuration call returned `0xe00002e2`
+(`not permitted`), with the descriptor unchanged and no role-switch request.
+Evidence: `device-snapshots/mac-usb-gadget-20260920T161449.186683Z/kernel-test.json`.
+This is not a successful configuration or CarPlay session, and the driver's
+one-shot attempt is now consumed.
+
+The reference helper's `alt_IOUSBDeviceDescriptionAppendConfiguration` sets
+`AllowMultipleCreates=true` to permit creation when a descriptor already exists.
+That flag is absent from our unchanged-descriptor request. It is a candidate
+explanation, not yet established for this OS. A targeted unified-log search did
+not expose the rejection reason. Further driver changes should be consolidated
+before installation because the user wants to avoid repeated approval/reboot
+cycles. No additional driver was installed following this test.
+
 ## Proposed Mac-only test path — not implemented
+
+The native path has since advanced to a prepared reusable 0.2.0 bridge. Offline
+inspection of the installed USB driver found the exact missing-flag refusal
+path ([details](mac-usb-configuration-refusal.md)). The new bridge adds the
+replacement flag, bounded description validation, repeated requests with IDs,
+saved-configuration restoration, and explicit force-off/release controls.
+The normal client is `scripts/mac_usb_bridge.py`; protocol tests and descriptor
+tests passed with ASan/UBSan. The client refuses the currently loaded older
+driver without sending a request. The generated iAP2/NCM profile is a local
+starting point, not a tested head-unit configuration or working receiver.
 
 A temporary bench hook inside the actual dongle application could supply the
 missing display setup and capture its common outgoing video path over Wi-Fi.

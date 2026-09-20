@@ -35,6 +35,14 @@ def main():
         run(['xcrun', 'clang++', '-std=c++14', '-Wall', '-Wextra', '-Werror',
              '-fsanitize=address,undefined', SOURCE / 'test_policy.cpp', '-o', test])
         print(run([test]), end='')
+        descriptor_test = BUILD / 'test-descriptor'
+        run(['xcrun', 'clang++', '-std=c++14', '-Wall', '-Wextra', '-Werror', '-fobjc-arc',
+             '-fsanitize=address,undefined', '-framework', 'Foundation',
+             SOURCE / 'test_descriptor.mm', '-o', descriptor_test])
+        print(run([descriptor_test]), end='')
+        run(['xcrun', 'clang++', '-std=c++14', '-Wall', '-Wextra', '-Werror', '-fobjc-arc',
+             '-framework', 'Foundation', '-framework', 'IOKit', SOURCE / 'bridge.mm',
+             '-o', BUILD / 'mac-usb-bridge'])
         flags = ['-target', f'arm64e-apple-macos{version}', '-isysroot', str(sdk),
                  '-nostdinc', '-mkernel', '-fno-builtin', '-fno-common', '-DKERNEL', '-DKERNEL_PRIVATE',
                  '-DDRIVER_PRIVATE', '-DAPPLE', '-DNeXT', '-Os', '-Wall', '-Wextra', '-Werror',
@@ -45,7 +53,7 @@ def main():
         module.write_text('''#include <mach/mach_types.h>
 extern kern_return_t _start(kmod_info_t *, void *);
 extern kern_return_t _stop(kmod_info_t *, void *);
-__attribute__((visibility("default"))) KMOD_EXPLICIT_DECL(local.smartbox.USBProbe, "0.1.1", _start, _stop)
+__attribute__((visibility("default"))) KMOD_EXPLICIT_DECL(local.smartbox.USBProbe, "0.2.0", _start, _stop)
 __private_extern__ kmod_start_func_t *_realmain = 0;
 __private_extern__ kmod_stop_func_t *_antimain = 0;
 __private_extern__ int _kext_apple_cc = __APPLE_CC__;
@@ -56,7 +64,7 @@ __private_extern__ int _kext_apple_cc = __APPLE_CC__;
              '-lkmodc++', '-lkmod', '-lcc_kext', '-o', executable])
         plist = dict(CFBundleIdentifier=BUNDLE, CFBundleExecutable='SmartBoxUSBProbe',
                      CFBundleName='SmartBoxUSBProbe', CFBundlePackageType='KEXT',
-                     CFBundleVersion='0.1.1', CFBundleShortVersionString='0.1.1',
+                     CFBundleVersion='0.2.0', CFBundleShortVersionString='0.2.0',
                      OSBundleLibraries={'com.apple.kpi.iokit': '9.0.0', 'com.apple.kpi.libkern': '9.0.0',
                                         'com.apple.kpi.mach': '9.0.0'},
                      IOKitPersonalities={'SmartBoxUSBProbe': dict(
@@ -72,10 +80,11 @@ __private_extern__ int _kext_apple_cc = __APPLE_CC__;
         log.write(signing.stdout + signing.stderr)
         if signing.returncode == 0:
             raise RuntimeError('Unexpected signed build; inspect the existing output directory')
-    sources = [SOURCE / v for v in ('SmartBoxUSBProbe.cpp', 'ProbePolicy.h', 'test_policy.cpp')]
+    sources = [SOURCE / v for v in ('SmartBoxUSBProbe.cpp', 'ProbePolicy.h', 'test_policy.cpp',
+                                    'DescriptorValidation.h', 'FoundationNodes.h', 'test_descriptor.mm', 'bridge.mm')]
     sources.append(Path(__file__).resolve())
     report = dict(sdk=str(sdk), sdk_version=version, architecture='arm64e', policy_tests='passed',
-                  installed=False, loaded=False, hardware_tested=False, signed=False,
+                  descriptor_tests='passed', installed=False, loaded=False, hardware_tested=False, signed=False,
                   sources={str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
                   artifacts={str(p.relative_to(BUILD)): hashlib.sha256(p.read_bytes()).hexdigest() for p in (executable, info)},
                   commands=commands)
