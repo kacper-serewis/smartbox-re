@@ -96,6 +96,7 @@ class USBObserver:
                     sequence = next((line.split(':', 1)[1].strip() for line in lines if line.lower().startswith('cseq:')), '')
                     extra = ('CSeq: ' + sequence + '\r\n') if sequence.isdecimal() and len(sequence) < 12 else ''
                     connection.sendall((version + ' 501 Not Implemented\r\n' + extra + 'Content-Length: 0\r\nConnection: close\r\n\r\n').encode())
+                    self.records[-1]['response_status'] = 501
                     break
         except OSError as error:
             self.records.append(dict(error=str(error)))

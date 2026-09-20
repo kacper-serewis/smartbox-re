@@ -336,11 +336,6 @@ int main(int argc, const char **argv) {
                                             // published disconnected state during host-role restore.
                                             for (unsigned i = 0; i < 20 && !disconnected(controller); ++i) usleep(25000);
                                             if (disconnected(controller)) report[@"role_watchdog_disconnected"] = @YES;
-                                            else if (std::chrono::steady_clock::now() - start >= std::chrono::seconds(14)) {
-                                                // The runner independently verifies the role helper's
-                                                // restore result. Preserve this terminal transport status.
-                                                report[@"transport_aborted_at_end"] = result(r);
-                                            }
                                             else { report[@"read_error"] = result(r); operation = r; }
                                             break;
                                         } else if (r != kIOReturnTimeout && (uint32_t)r != 0xe0000001) {

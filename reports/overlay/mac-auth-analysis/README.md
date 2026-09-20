@@ -80,6 +80,15 @@ custom receiver. The observer intentionally returned 501; no AirPlay setup or
 video was completed. That early test still reported the final USB read's abort
 as an error even though request capture and restoration succeeded.
 
+The final repeat in `device-snapshots/mac-usb-session-20260920T173144.981849Z`
+captured the complete 33-byte request body as well. Its last USB read aborted
+after about 8.7 seconds, before the 15-second role watchdog; this must not be
+attributed to that watchdog. The observer had returned 501, and no working
+AirPlay setup was provided. The runner now distinguishes successful request
+observation from that terminal USB status, preserves the raw abort in evidence,
+and still requires verified host-role/configuration restoration. Other transport
+errors or absence of a captured/replied request do not count as success.
+
 Two ordering details mattered: the IP must be a nested list item in `0x4301`,
 and the listener must exist before iAP2 authentication begins. Otherwise the
 dongle chooses macOS's existing AirPlay advertisement and is already connecting

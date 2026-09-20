@@ -135,16 +135,20 @@ def main():
     result = json.loads((out / 'listen.json').read_text())
     keys = ('result', 'received_hex', 'detect_echo_received', 'valid_control_syn_ack', 'control_transfer_captured',
             'control_messages', 'authentication_succeeded', 'identification_requested', 'identification_accepted',
-            'session_start_sent', 'transport_aborted_at_end', 'error')
+            'session_start_sent', 'read_error', 'error')
     print(json.dumps({k: result[k] for k in keys if k in result}, indent=2))
     if not role_result.get('mac_host_mode_restore', {}).get('success') or role_result.get('mode_after') != 2:
         raise RuntimeError('Mac host-role restoration was not verified; inspect role.json')
     print('Mac host role and original USB configuration restored. No firmware changes.')
     milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted', 'network': 'session_start_sent'}[args.stage]
-    network_ok = observer is None or any(record.get('request') for record in observer.records)
+    network_ok = observer is None or any(record.get('request') and record.get('response_status') == 501 for record in observer.records)
     if observer:
         print('Observed requests:', [record.get('request', record.get('error')) for record in observer.records])
-    return 0 if result.get('result', {}).get('success') and result.get(milestone) and role.returncode == 0 and network_ok else 3
+    transport_ok = result.get('result', {}).get('success')
+    if args.stage == 'network' and network_ok and not result.get('error') and result.get('result', {}).get('hex') == '0xe00002eb':
+        print('Request observation completed; the final USB read was aborted. The observer returned 501, not a video session.')
+        transport_ok = True
+    return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok else 3
 
 
 if __name__ == '__main__':
