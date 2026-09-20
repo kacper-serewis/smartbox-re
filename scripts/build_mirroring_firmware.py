@@ -21,9 +21,17 @@ from update_device import load_release
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--density', type=float, choices=(125, 137.5, 150), default=137.5)
+    parser.add_argument('--output', type=Path, help='Separate release directory; preserves earlier builds')
     args = parser.parse_args()
     build = ROOT / 'firmwares/research/mirroring-riscv'
     mode = ROOT / 'firmwares/experiments/connection-mode'
+    mode_manifest = json.loads((mode / 'manifest.json').read_text())
+    for name, info in mode_manifest['files'].items():
+        if sha((mode / name).read_bytes()) != info['sha256']:
+            raise ValueError(f'Mode bundle mismatch; rebuild before packaging: {name}')
+    for name in ('index.html', 'mode.js'):
+        if (mode / 'web' / name).read_bytes() != (ROOT / 'experiments/mode/web' / name).read_bytes():
+            raise ValueError(f'Mode web source changed; rebuild before packaging: {name}')
     manifest = json.loads((build / 'manifest.json').read_text())
     for name, digest in manifest['integration_sources'].items():
         if sha((ROOT / name).read_bytes()) != digest:
@@ -31,7 +39,7 @@ def main():
     for name in ('libsmartbox-mirror.so', 'smartbox-launch'):
         if sha((build / name).read_bytes()) != manifest['files'][name]['sha256']:
             raise ValueError(f'Build manifest mismatch: {name}')
-    output = ROOT / f'firmwares/experiments/hw501_131_mirroring_density{args.density:g}'
+    output = args.output or ROOT / f'firmwares/experiments/hw501_131_mirroring_density{args.density:g}'
     output.mkdir(parents=True, exist_ok=True)
     # Never leave validation for an older archive alongside a newly built image.
     (output / 'validation.json').unlink(missing_ok=True)
@@ -101,7 +109,9 @@ def main():
                    'chunk_metadata': {'result': 1, 'version': 131, 'pos': 0, 'itemsize': step, 'count': (len(raw) + step - 1) // step, 'filesize': len(raw), 'datasize': step},
                    'changed_stock_files': changed, 'added_files': sorted(set(new) - set(old)), 'density_patch': density,
                    'receiver_build': manifest,
-                   'limitations': ['No physical dongle/Corsa mirroring test yet', 'No full iOS pairing test yet',
+                   'mode_build': mode_manifest,
+                   'limitations': ['This packaged release has not yet been boot-tested on the dongle',
+                                   'Corsa validation of the corrected video path remains outstanding',
                                    'Video passthrough only; no audio, touch, scaling, or rotation adaptation',
                                    'Head unit acceptance of phone-selected H.264 geometry is unverified'],
                    'recovery': 'External supervisor; persistent disable latch on app failure; three original-app attempts; independent mode page; not hardware validated',
