@@ -27,18 +27,27 @@ printf '%s %s\\n' "$1" "$2" >> "$SMARTBOX_TEST_DIR/journal"
 test ! -f "$SMARTBOX_TEST_DIR/fail-$1-$2"
 ''')
         self.driver.chmod(0o700)
+        self.reboot = self.folder / "fake-reboot"
+        self.reboot.write_text('''#!/bin/sh
+set -eu
+cat "$SMARTBOX_TEST_DIR/state/connection-mode" >> "$SMARTBOX_TEST_DIR/reboots"
+test ! -f "$SMARTBOX_TEST_DIR/fail-reboot"
+''')
+        self.reboot.chmod(0o700)
         self.proc = None
 
     def tearDown(self):
         self.stop()
         self.temp.cleanup()
 
-    def start(self, with_driver=True, runtime_status=None):
+    def start(self, with_driver=True, runtime_status=None, reboot=False):
         args = COMMAND + ["--state-dir", str(self.state), "--web-dir", str(ROOT / "experiments/mode/web"), "--port", "0", "--lab"]
         if with_driver:
             args += ["--driver", str(self.driver)]
         if runtime_status:
             args += ["--runtime-status", str(runtime_status)]
+        if reboot:
+            args += ["--reboot-command", str(self.reboot)]
         env = dict(os.environ, SMARTBOX_TEST_DIR=str(self.folder))
         self.proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, bufsize=0)
         deadline = time.monotonic() + 15
@@ -79,6 +88,75 @@ test ! -f "$SMARTBOX_TEST_DIR/fail-$1-$2"
 
     def select(self, mode):
         return self.request("POST", body=f"mode={mode}", headers={"X-SmartBox-Mode": "1"})
+
+    def until(self, predicate, seconds=5):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if predicate():
+                return
+            time.sleep(0.05)
+        self.fail("Condition timed out")
+
+    def test_save_acknowledged_before_single_delayed_reboot(self):
+        self.start(reboot=True)
+        self.assertTrue(self.request()[1]['restart_on_save'])
+        status, state = self.select('mirroring')
+        self.assertEqual(status, 200)
+        self.assertTrue(state['restarting'])
+        self.assertEqual(state['active'], 'carplay')
+        self.assertFalse((self.folder / 'reboots').exists())
+        self.assertEqual(self.select('carplay')[0], 409)
+        self.until(lambda: (self.folder / 'reboots').exists())
+        self.assertEqual((self.folder / 'reboots').read_text(), 'mirroring\n')
+        self.assertEqual(self.select('carplay')[0], 409)
+        self.stop()
+        self.start(reboot=True)
+        state = self.request()[1]
+        self.assertEqual(state['active'], 'mirroring')
+        self.assertFalse(state['restarting'])
+        self.assertEqual(self.select('carplay')[0], 200)
+        self.until(lambda: (self.folder / 'reboots').read_text() == 'mirroring\ncarplay\n')
+
+    def test_reboot_failure_preserves_selection_and_allows_retry(self):
+        (self.folder / 'fail-reboot').touch()
+        self.start(reboot=True)
+        self.assertEqual(self.select('mirroring')[0], 200)
+        self.until(lambda: self.request()[1]['error'] == 'restart_failed')
+        state = self.request()[1]
+        self.assertFalse(state['restarting'])
+        self.assertEqual(state['selected'], 'mirroring')
+        (self.folder / 'fail-reboot').unlink()
+        self.assertTrue(self.select('mirroring')[1]['restarting'])
+        self.until(lambda: (self.folder / 'reboots').read_text() == 'mirroring\nmirroring\n')
+
+    def test_failed_and_rejected_saves_never_reboot(self):
+        self.start(reboot=True)
+        self.assertEqual(self.select('invalid')[0], 400)
+        self.assertEqual(self.request('POST', body='mode=mirroring')[0], 403)
+        self.assertEqual(self.request('POST', body='mode=mirroring', headers={
+            'X-SmartBox-Mode': '1', 'Origin': 'http://unrelated.invalid'})[0], 403)
+        (self.state / 'connection-mode').mkdir()
+        self.assertEqual(self.select('mirroring')[0], 500)
+        time.sleep(2.3)
+        self.assertFalse((self.folder / 'reboots').exists())
+        self.assertFalse(self.request()[1]['restarting'])
+
+    def test_incomplete_startup_and_missing_reboot_command_block_save(self):
+        self.start(reboot=True)
+        (self.state / 'boot-pending').touch()
+        self.assertEqual(self.select('mirroring')[0], 409)
+        (self.state / 'boot-pending').unlink()
+        self.reboot.unlink()
+        self.assertEqual(self.select('mirroring')[0], 503)
+        self.assertFalse((self.state / 'connection-mode').exists())
+        self.assertFalse(self.request()[1]['restarting'])
+
+    def test_accepted_reboot_that_does_not_happen_reports_failure(self):
+        self.start(reboot=True)
+        self.assertEqual(self.select('mirroring')[0], 200)
+        self.until(lambda: self.request()[1]['error'] == 'restart_failed', seconds=20)
+        self.assertEqual((self.folder / 'reboots').read_text(), 'mirroring\n')
+        self.assertFalse(self.request()[1]['restarting'])
 
     def test_runtime_pin_and_status_are_bounded(self):
         status = self.folder / 'runtime.json'

@@ -101,8 +101,9 @@ static pid_t launch_page(int recovery) {
         child_setup(parent);
         char *args[] = {"smartbox-mode", "--state-dir", MODE_DIR, "--web-dir", MODE_WEB,
                         "--bind", "0.0.0.0", "--port", "8081", "--runtime-status", STATUS_FILE,
+                        "--reboot-command", REBOOT_COMMAND,
                         NULL, NULL, NULL};
-        if (!recovery) { args[11] = "--driver"; args[12] = MODE_DRIVER; }
+        if (!recovery) { args[13] = "--driver"; args[14] = MODE_DRIVER; }
         execv(MODE_BINARY, args); _exit(127);
     }
     if (child > 0) setpgid(child, child);

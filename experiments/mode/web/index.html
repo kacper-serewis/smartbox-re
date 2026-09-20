@@ -11,7 +11,7 @@ body{font:17px system-ui,sans-serif;background:#f4f5f7;color:#192126;margin:0;pa
 <label><input type="radio" name="mode" value="mirroring"><div><strong>Screen Mirroring</strong><span>Connect to the adapter’s Wi-Fi, then select it in your iPhone’s Screen Mirroring menu.</span><span id="unavailable" hidden>Screen Mirroring is not available in this build.</span></div></label>
 <button type="submit" disabled>Save mode</button></form>
 <p id="status" role="status" aria-live="polite">Loading connection mode…</p>
-<p id="active"></p><small>Your choice is remembered. Restart the adapter to apply a change.</small>
+<p id="active"></p><small id="save-help">Your choice is remembered.</small>
 <p id="mirror-status" role="status" hidden></p>
 <p id="mirror-scope" hidden>Experimental video forwarding. Audio and car-screen touch are not supported. Control the mirrored screen from your iPhone while parked.</p>
 </main><script src="/mode.js"></script></body></html>

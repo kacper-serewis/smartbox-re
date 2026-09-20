@@ -22,23 +22,28 @@
 #include <unistd.h>
 
 static volatile sig_atomic_t stopping;
-static const char *driver, *state_dir, *web_dir, *runtime_status;
+static const char *driver, *state_dir, *web_dir, *runtime_status, *reboot_command;
 static const char *selected = "carplay", *active = "unknown", *error_code = "none";
 static bool available_mirroring, lab;
+static double reboot_at, reboot_requested_at;
+static double now(void) {
+    struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec + t.tv_nsec / 1e9;
+}
 static void stop_signal(int value) { (void)value; stopping = 1; }
 static void pause_ms(void) { struct timespec t = {0, 50000000}; nanosleep(&t, NULL); }
 static bool mode_valid(const char *s) { return !strcmp(s, "carplay") || !strcmp(s, "mirroring"); }
 static void path(char *out, size_t size, const char *root, const char *name) {
     if (snprintf(out, size, "%s/%s", root, name) >= (int)size) { fputs("Path too long\n", stderr); exit(2); }
 }
-static int run_driver(const char *operation, const char *mode) {
-    if (!driver) return -1;
+static int run_command(const char *command, const char *operation, const char *mode) {
+    if (!command) return -1;
     pid_t child = fork();
     if (child < 0) { perror("driver fork"); return -1; }
     if (!child) {
         setpgid(0, 0);
         dup2(STDERR_FILENO, STDOUT_FILENO);
-        execl(driver, driver, operation, mode, (char *)NULL);
+        execl(command, command, operation, mode, (char *)NULL);
         perror("driver exec");
         _exit(127);
     }
@@ -53,6 +58,21 @@ static int run_driver(const char *operation, const char *mode) {
     kill(-child, SIGKILL);
     while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {}
     return -1;
+}
+static int run_driver(const char *operation, const char *mode) {
+    return run_command(driver, operation, mode);
+}
+static void restart_tick(void) {
+    if (reboot_at && now() >= reboot_at) {
+        reboot_at = 0;
+        if (run_command(reboot_command, NULL, NULL)) error_code = "restart_failed";
+        else reboot_requested_at = now();
+    }
+    /* A successful utility exit only acknowledges the request to init. */
+    if (reboot_requested_at && now() - reboot_requested_at >= 15) {
+        reboot_requested_at = 0;
+        error_code = "restart_failed";
+    }
 }
 static void read_mode(void) {
     char filename[4096], buffer[32] = {0};
@@ -119,9 +139,11 @@ static void message(int fd, int status, const char *text) {
 static void state_reply(int fd) {
     char body[512];
     int n = snprintf(body, sizeof(body), "{\"selected\":\"%s\",\"active\":\"%s\",\"pending\":%s,"
-        "\"available\":{\"carplay\":true,\"mirroring\":%s},\"error\":\"%s\",\"lab\":%s}\n",
+        "\"available\":{\"carplay\":true,\"mirroring\":%s},\"error\":\"%s\",\"lab\":%s,"
+        "\"restart_on_save\":%s,\"restarting\":%s}\n",
         selected, active, strcmp(selected, active) ? "true" : "false",
-        available_mirroring ? "true" : "false", error_code, lab ? "true" : "false");
+        available_mirroring ? "true" : "false", error_code, lab ? "true" : "false",
+        reboot_command ? "true" : "false", (reboot_at || reboot_requested_at) ? "true" : "false");
     reply(fd, 200, "application/json", body, n);
 }
 static void asset(int fd, const char *name, const char *type) {
@@ -204,10 +226,21 @@ static void client(int fd) {
         message(fd, 400, "Choose CarPlay or Screen Mirroring"); return;
     }
     mode += 5;
+    if (reboot_at || reboot_requested_at) { message(fd, 409, "Adapter is already restarting"); return; }
     if (!strcmp(mode, "mirroring") && !available_mirroring) { message(fd, 409, "Screen Mirroring is unavailable in this build"); return; }
+    if (reboot_command) {
+        char pending[4096], recovery[4096];
+        path(pending, sizeof(pending), state_dir, "boot-pending");
+        path(recovery, sizeof(recovery), state_dir, "recovery-disabled");
+        if (!access(pending, F_OK) && access(recovery, F_OK)) {
+            message(fd, 409, "Adapter is still starting. Wait a moment and save again"); return;
+        }
+        if (access(reboot_command, X_OK)) { message(fd, 503, "Restart command is unavailable; mode was not saved"); return; }
+    }
     if (save_mode(mode)) { message(fd, 500, "Could not save connection mode"); return; }
     selected = !strcmp(mode, "mirroring") ? "mirroring" : "carplay";
-    if (!strcmp(error_code, "invalid_settings")) error_code = "none";
+    if (!strcmp(error_code, "invalid_settings") || !strcmp(error_code, "restart_failed")) error_code = "none";
+    if (reboot_command) reboot_at = now() + 2;
     state_reply(fd);
 }
 int main(int argc, char **argv) {
@@ -220,11 +253,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(option, "--web-dir")) web_dir = value;
         else if (!strcmp(option, "--driver")) driver = value;
         else if (!strcmp(option, "--runtime-status")) runtime_status = value;
+        else if (!strcmp(option, "--reboot-command")) reboot_command = value;
         else if (!strcmp(option, "--bind")) bind_address = value;
         else if (!strcmp(option, "--port")) { char *last; long n = strtol(value, &last, 10); if (*last || n < 0 || n > 65535) return 2; port = n; }
         else { fprintf(stderr, "Unknown option: %s\n", option); return 2; }
     }
-    if (!state_dir || !web_dir || (driver && driver[0] != '/')) { fputs("Required: --state-dir DIR --web-dir DIR [--driver /absolute/executable]\n", stderr); return 2; }
+    if (!state_dir || !web_dir || (driver && driver[0] != '/') ||
+        (reboot_command && reboot_command[0] != '/')) { fputs("Required: --state-dir DIR --web-dir DIR [--driver /absolute/executable] [--reboot-command /absolute/executable]\n", stderr); return 2; }
     umask(0077);
     if (mkdir(state_dir, 0700) && errno != EEXIST) { perror("state directory"); return 1; }
     char lock_path[4096]; path(lock_path, sizeof(lock_path), state_dir, "service.lock");
@@ -245,6 +280,8 @@ int main(int argc, char **argv) {
     socklen_t size = sizeof(address); getsockname(server, (struct sockaddr *)&address, &size);
     printf("READY http://%s:%u selected=%s active=%s\n", bind_address, ntohs(address.sin_port), selected, active); fflush(stdout);
     while (!stopping) {
+        restart_tick();
+        if (stopping) break;
         fd_set readers; FD_ZERO(&readers); FD_SET(server, &readers);
         struct timeval wait = {.tv_sec = 0, .tv_usec = 200000};
         if (select(server + 1, &readers, NULL, NULL, &wait) <= 0) continue;

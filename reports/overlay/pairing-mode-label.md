@@ -34,10 +34,12 @@ Checks:
   `native-video-tests-20260920T182324.555575Z`.
 
 Both USB tests verified restoration of the Mac's host role and original profile.
-The Mac lost its Wi-Fi association after the final test, so the explicit RAM
-launcher stop and dongle application restoration check could not reach the
-device at that point. The launcher's independent 300-second deadline remains
-the fallback; no firmware was flashed.
+After reconnecting Wi-Fi, the explicit RAM launcher stop succeeded. At
+18:27:21 UTC, the dongle had one running original application, no experimental
+bridge loaded, and an idle updater. The RAM socket compatibility shim remains
+loaded for the warm restart and disappears on a power cycle. Evidence is in
+`mirroring-bench-20260920T181951.089811Z/label-test-restoration.json` under
+`device-snapshots/`. No firmware was flashed.
 
 The RAM launcher also now allows five seconds for receiver startup commands;
 cheap readiness probes retain their short timeout. A regression test covers a

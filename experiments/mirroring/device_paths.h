@@ -17,6 +17,7 @@
 #define MODE_BINARY SMARTBOX_ROOT "/mnt/app/bin/smartbox-mode"
 #define MODE_WEB SMARTBOX_ROOT "/mnt/app/mode-web"
 #define MODE_DRIVER SMARTBOX_ROOT "/mnt/app/bin/smartbox-mode-driver"
+#define REBOOT_COMMAND SMARTBOX_ROOT "/sbin/reboot"
 #define RECOVERY_LATCH MODE_DIR "/recovery-disabled"
 #define BOOT_PENDING MODE_DIR "/boot-pending"
 #define MIRROR_LIBRARY SMARTBOX_ROOT "/mnt/app/lib/libsmartbox-mirror.so"

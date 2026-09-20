@@ -8,8 +8,11 @@ Implemented behavior:
 
 - CarPlay is the default; the selected mode is written atomically and survives
   service/device restarts. Existing firmware audio/density settings are untouched.
-- Saving a mode does not interrupt the active connection. The service reports
-  `selected`, `active`, and `pending` separately; startup applies the saved choice.
+- On the device, **Save & restart** writes and syncs the choice, acknowledges the
+  request, then requests a normal reboot after two seconds. Startup applies the
+  saved choice. The service reports `selected`, `active`, and `pending` separately.
+  The browser waits for the mode page to return; Wi-Fi may need reconnecting.
+  The Mac development preview still only saves, without rebooting.
 - A driver probes mirroring availability and performs mode startup/cleanup.
   Failed mirroring startup falls back to CarPlay after successful cleanup,
   preserving the user's selected mode and reporting the fallback.
@@ -18,7 +21,8 @@ Implemented behavior:
 - One service instance owns a state directory. Invalid values, failed saves,
   and cross-origin browser writes are rejected. Hook execution is bounded.
 
-**An experimental device integration and flashable image are now built.** A
+**The previous flashable image is withdrawn; current changes are source/build
+only until a replacement is packaged and tested.** A
 launcher supervises the stock app process, loads a mirroring bridge, and starts
 this service with a real Unix-socket driver. The bridge interposes phone-side
 startup calls and feeds the exported stock video callback. See
@@ -68,7 +72,7 @@ Installed launch shape:
 smartbox-mode --state-dir /mnt/UDISK/smartbox-mode \
   --web-dir /mnt/app/mode-web --bind 0.0.0.0 --port 8081 \
   --driver /mnt/app/bin/smartbox-mode-driver \
-  --runtime-status /tmp/smartbox-mirror.json
+  --runtime-status /tmp/smartbox-mirror.json --reboot-command /sbin/reboot
 ```
 
 These paths are included in the experimental image. The existing
@@ -94,16 +98,34 @@ mode. The saved selection remains on disk.
 
 The API is `GET /api/mode` and `POST /api/mode` with form body
 `mode=carplay` or `mode=mirroring` and header `X-SmartBox-Mode: 1`. POST saves the
-choice; restart performs activation. Serving defaults to loopback for local
+choice; restart performs activation. With `--reboot-command`, a successful POST
+also schedules that executable (no shell or arguments) after the reply. The
+device launcher supplies `/sbin/reboot`, without force flags. Invalid requests,
+failed persistence, missing reboot command, and incomplete experimental startup
+do not schedule a reboot. Additional saves are rejected while restarting.
+The recovery latch is never cleared by saving or restarting.
+
+`restart_on_save` advertises this behavior; `restarting` reports a scheduled or
+requested restart. A failed command or an unchanged service still running 15
+seconds after command success reports `restart_failed`, preserving the saved
+choice and allowing retry. This is not an automatic retry loop. A lost HTTP reply
+does not undo a saved choice or its scheduled restart. The browser waits up to
+two minutes and then asks the user to reconnect/reload if it cannot confirm state.
+Serving defaults to loopback for local
 development. The configuration endpoint stays up even if activation fails.
 
 ## Validation
 
-Ten integration tests passed on macOS and with the RV32 executable under
-QEMU: restart persistence in both directions, delayed application, failed-start
+Integration tests cover native macOS and the RV32 executable under
+QEMU: restart persistence in both directions, response before reboot invocation,
+duplicate-save rejection, reboot failure/retry, accepted-but-ineffective reboot,
+incomplete-startup protection, failed-start
 fallback, cleanup failure, corrupt saved settings, missing integration,
 invalid/cross-origin writes, delayed HTTP bodies on rejected requests, failed
 persistence, and static page serving.
-Some test cases cover multiple assertions. Browser interaction also confirmed
-that selecting Screen Mirroring changes the saved choice while CarPlay remains
-the active mode until restart.
+Reboot tests use an explicit fake executable and never restart the test host.
+All 15 service tests passed on native macOS and RV32 QEMU. The 13 supervisor
+tests also passed on native Linux and RV32, including clean shutdown and updater
+survival. The firmware components build successfully; JavaScript syntax and UI
+states (device, restarting, failed restart, local preview) were checked locally.
+The actual dongle reboot after saving has not yet been hardware-tested.
