@@ -20,7 +20,10 @@ collected in this investigation and no fix has been installed.
 Subsequent [Carlinkit before/after firmware analysis](carlinkit/README.md) found
 an explicit Sony-specific 44.1 kHz PCM preference and a separate pairing change
 in the release associated with Sony audio fixes. Those are now concrete HW501
-investigation leads; neither has been ported or tested on this setup.
+investigation leads. The 44.1 kHz candidate has now been implemented in an
+[experimental Sony-only HW501 image](sony-build/README.md), with offline
+emulation and package checks. Neither audible playback nor the separate pairing
+change has been validated on this setup.
 
 ## Static firmware evidence
 
@@ -103,6 +106,7 @@ its capabilities should not be copied blindly into the Sony session.
 
 ## Validation status
 
-Firmware hash checked against the repository inventory; disassembly excerpts
-generated from that binary. No firmware edits, hardware tests, or successful
-audio repair are claimed.
+The original static investigation used the hash-checked stock firmware.
+See the [subsequent build report](sony-build/README.md) for implemented firmware
+edits and offline tests. No physical hardware test or successful audio repair
+has yet been recorded.
