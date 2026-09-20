@@ -1,0 +1,116 @@
+#pragma once
+#include "IAP2Probe.h"
+#include <functional>
+#include <string>
+#include <vector>
+
+namespace iap2probe {
+using Bytes = std::vector<uint8_t>;
+inline unsigned be16(const uint8_t *p) { return (unsigned(p[0]) << 8) | p[1]; }
+inline void append16(Bytes &v, unsigned n) { v.push_back(uint8_t(n >> 8)); v.push_back(uint8_t(n)); }
+inline uint8_t checksum(const Bytes &v) {
+    uint8_t sum = 0; for (auto b : v) sum += b; return uint8_t(-sum);
+}
+inline Bytes packet(uint8_t seq, uint8_t ack, const Bytes &payload = {}) {
+    Bytes result{0xff, 0x5a}; append16(result, 9 + (payload.empty() ? 0 : payload.size() + 1));
+    result.insert(result.end(), {0x40, seq, ack, uint8_t(payload.empty() ? 0 : 1)});
+    result.push_back(checksum(result));
+    if (!payload.empty()) {
+        result.insert(result.end(), payload.begin(), payload.end()); result.push_back(checksum(payload));
+    }
+    return result;
+}
+inline Bytes message(unsigned id, const Bytes &value) {
+    Bytes result{0x40, 0x40}; append16(result, 10 + value.size()); append16(result, id);
+    append16(result, 4 + value.size()); append16(result, 0);
+    result.insert(result.end(), value.begin(), value.end()); return result;
+}
+
+// Bounded bench exchange, ending at StartIdentification. No general-purpose
+// authentication credentials, device changes, or video-session support.
+class AuthProbe {
+public:
+    using Sign = std::function<Bytes(const Bytes &)>;
+    bool authenticated = false, identificationRequested = false;
+    unsigned certificateReplies = 0, challengeReplies = 0;
+    std::vector<unsigned> messages;
+    std::string error;
+    AuthProbe(uint8_t peerSyn, Bytes certificate, Sign sign)
+        : peer(peerSyn), cert(std::move(certificate)), signer(std::move(sign)) {}
+    bool done() const { return authenticated && identificationRequested; }
+
+    bool feed(const uint8_t *data, size_t size, std::vector<Bytes> &out) {
+        if (!error.empty()) return false;
+        if (size > 4096 || incoming.size() + size > 8192) return fail("USB input exceeds probe bound");
+        incoming.insert(incoming.end(), data, data + size);
+        while (incoming.size() >= 9) {
+            if (incoming[0] != 0xff || incoming[1] != 0x5a || !checksumValid(incoming.data(), 9))
+                return fail("Invalid iAP2 header");
+            unsigned n = be16(incoming.data() + 2);
+            if (n < 9 || n > 4096) return fail("Invalid iAP2 packet size");
+            if (incoming.size() < n) return true;
+            Bytes frame(incoming.begin(), incoming.begin() + n);
+            incoming.erase(incoming.begin(), incoming.begin() + n);
+            if (++frames > 64) return fail("Packet limit reached");
+            if (frame[4] != 0x40) return fail("Unexpected iAP2 control flags");
+            if (n == 9) continue; // Pure link ACK; no data sequence consumed.
+            if (n < 11 || frame[7] != 1 || !checksumValid(frame.data() + 9, n - 9))
+                return fail("Invalid control-session payload");
+            if (frame[5] == peer) {
+                if (lastFrame != frame) return fail("Conflicting duplicate sequence");
+                out.insert(out.end(), lastReplies.begin(), lastReplies.end());
+                continue;
+            }
+            if (frame[5] != uint8_t(peer + 1)) return fail("Out-of-order data sequence");
+            if (control.size() + n - 10 > 4096) return fail("Control message exceeds probe bound");
+            peer = frame[5]; lastFrame = frame; lastReplies.clear();
+            lastReplies.push_back(packet(uint8_t(nextSeq - 1), peer));
+            control.insert(control.end(), frame.begin() + 9, frame.end() - 1);
+            while (control.size() >= 6) {
+                if (control[0] != 0x40 || control[1] != 0x40) return fail("Invalid control-message marker");
+                unsigned count = be16(control.data() + 2), id = be16(control.data() + 4);
+                if (count < 6 || count > 4096) return fail("Invalid control-message size");
+                if (control.size() < count) break;
+                Bytes body(control.begin() + 6, control.begin() + count);
+                control.erase(control.begin(), control.begin() + count);
+                messages.push_back(id);
+                if (!handle(id, body)) return false;
+            }
+            out.insert(out.end(), lastReplies.begin(), lastReplies.end());
+            if (done()) return true;
+        }
+        return true;
+    }
+private:
+    uint8_t peer, nextSeq = 1;
+    unsigned frames = 0;
+    Bytes cert, incoming, control, lastFrame;
+    Sign signer;
+    std::vector<Bytes> lastReplies;
+    bool fail(const char *why) { error = why; return false; }
+    bool handle(unsigned id, const Bytes &body) {
+        if (id == 0xaa00) {
+            if (!body.empty() || certificateReplies || cert.size() <= 640 || cert.size() > 2048)
+                return fail("Unexpected certificate request or certificate size");
+            lastReplies.push_back(packet(nextSeq++, peer, message(0xaa01, cert)));
+            ++certificateReplies;
+        } else if (id == 0xaa02) {
+            if (certificateReplies != 1 || challengeReplies || body.size() != 24 || be16(body.data()) != 24 || be16(body.data() + 2) != 0)
+                return fail("Unsupported authentication challenge");
+            Bytes signature = signer(Bytes(body.begin() + 4, body.end()));
+            if (signature.size() != 256) return fail("RSA-2048 test-key signing failed");
+            lastReplies.push_back(packet(nextSeq++, peer, message(0xaa03, signature)));
+            ++challengeReplies;
+        } else if (id == 0xaa05) {
+            if (!body.empty() || challengeReplies != 1) return fail("Out-of-order authentication success");
+            authenticated = true;
+        } else if (id == 0xaa04) {
+            return fail("Dongle rejected the test authentication");
+        } else if (id == 0x1d00) {
+            if (!body.empty() || !authenticated) return fail("Out-of-order identification request");
+            identificationRequested = true;
+        } else return fail("Unexpected control message in authentication probe");
+        return true;
+    }
+};
+}

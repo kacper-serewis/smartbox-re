@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true', help='Publish, probe the owned dongle, and restore using native administrator dialogs')
-    parser.add_argument('--stage', choices=('detect', 'syn', 'control'), default='control')
+    parser.add_argument('--stage', choices=('detect', 'syn', 'control', 'auth'), default='control')
     args = parser.parse_args()
     if platform.system() != 'Darwin':
         parser.error('Requires the prepared macOS machine and loaded protocol-3 bridge')
@@ -25,13 +25,13 @@ def main():
     print('Evidence:', out, flush=True)
     src = ROOT / 'experiments/macos-usb'
     common = ['xcrun', 'clang++', '-std=c++14', '-O2', '-Wall', '-Wextra', '-Werror', '-fobjc-arc',
-              '-framework', 'Foundation', '-framework', 'IOKit']
+              '-framework', 'Foundation', '-framework', 'IOKit', '-framework', 'Security']
     manifest = {}
     for name, source in [('bridge', 'bridge.mm'), ('interface', 'interface_probe.mm'), ('role', 'role_switch.mm')]:
         extra = shlex.split(subprocess.check_output(['pkg-config', '--cflags', '--libs', 'libusb-1.0'], text=True)) if name == 'role' else []
         subprocess.run(common + [str(src / source), *extra, '-o', str(out / name)], check=True, timeout=60)
         manifest[source] = hashlib.sha256((src / source).read_bytes()).hexdigest()
-    for name in ('IAP2Probe.h', 'DescriptorValidation.h', 'FoundationNodes.h'):
+    for name in ('IAP2Probe.h', 'IAP2AuthProbe.h', 'DescriptorValidation.h', 'FoundationNodes.h'):
         manifest[name] = hashlib.sha256((src / name).read_bytes()).hexdigest()
     (out / 'sources.json').write_text(json.dumps(manifest, indent=2) + '\n')
 
@@ -57,14 +57,27 @@ def main():
         return 0
     if status.get('bridge', {}).get('ProbeVersion') != '3':
         raise RuntimeError('Expected the already-installed protocol-3 bridge; no changes made')
+    credentials = []
+    if args.stage == 'auth':
+        # Ephemeral self-signed bench identity, unrelated to any Apple/car keys.
+        cert, key, pem = out / 'test-cert.der', out / 'test-key.der', out / 'test-key.pem'
+        with (out / 'test-identity.log').open('w') as log:
+            subprocess.run(['/usr/bin/openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
+                            '-subj', '/CN=SmartBox Local Bench Test/O=Local Development Only',
+                            '-keyout', str(pem), '-outform', 'DER', '-out', str(cert)], stdout=log, stderr=log, check=True, timeout=30)
+            pem.chmod(0o600)
+            subprocess.run(['/usr/bin/openssl', 'rsa', '-in', str(pem), '-outform', 'DER', '-out', str(key)],
+                           stdout=log, stderr=log, check=True, timeout=10)
+            key.chmod(0o600)
+        credentials = [str(cert), str(key)]
     profile = out / 'profile.json'
     invoke('make-profile', ['--make-profile', str(profile)])
     listener = role = None
     try:
         invoke('publish', ['--publish', str(profile)], admin=True)
-        flag = {'detect': '--listen', 'syn': '--syn-probe', 'control': '--control-probe'}[args.stage]
+        flag = {'detect': '--listen', 'syn': '--syn-probe', 'control': '--control-probe', 'auth': '--auth-probe'}[args.stage]
         with (out / 'listen.json').open('w') as output, (out / 'listen.stderr').open('w') as errors:
-            listener = subprocess.Popen([str(out / 'interface'), flag, '30'], stdout=output, stderr=errors)
+            listener = subprocess.Popen([str(out / 'interface'), flag, '30', *credentials], stdout=output, stderr=errors)
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and listener.poll() is None:
                 if 'READY:' in (out / 'listen.stderr').read_text():
@@ -97,12 +110,13 @@ def main():
             raise RuntimeError('Original configuration comparison failed')
     role_result = json.loads((out / 'role.json').read_text())
     result = json.loads((out / 'listen.json').read_text())
-    keys = ('result', 'received_hex', 'detect_echo_received', 'valid_control_syn_ack', 'control_transfer_captured', 'error')
+    keys = ('result', 'received_hex', 'detect_echo_received', 'valid_control_syn_ack', 'control_transfer_captured',
+            'control_messages', 'authentication_succeeded', 'identification_requested', 'error')
     print(json.dumps({k: result[k] for k in keys if k in result}, indent=2))
     if not role_result.get('mac_host_mode_restore', {}).get('success') or role_result.get('mode_after') != 2:
         raise RuntimeError('Mac host-role restoration was not verified; inspect role.json')
     print('Mac host role and original USB configuration restored. No firmware changes.')
-    milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured'}[args.stage]
+    milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested'}[args.stage]
     return 0 if result.get('result', {}).get('success') and result.get(milestone) and role.returncode == 0 else 3
 
 

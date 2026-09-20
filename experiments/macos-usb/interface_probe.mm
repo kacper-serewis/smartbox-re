@@ -2,12 +2,15 @@
 #import <Foundation/Foundation.h>
 #import <IOKit/IOKitLib.h>
 #import <mach/mach_error.h>
+#import <Security/Security.h>
 #include <cstring>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <unistd.h>
 #include "IAP2Probe.h"
+#include "IAP2AuthProbe.h"
+#include <memory>
 
 static volatile sig_atomic_t interrupted = 0;
 static void interruptHandler(int) { interrupted = 1; }
@@ -34,9 +37,10 @@ static bool disconnected(io_registry_entry_t controller) {
 int main(int argc, const char **argv) {
     @autoreleasepool {
         unsigned listenSeconds = 0;
-        bool controlProbe = argc == 3 && !strcmp(argv[1], "--control-probe");
+        bool authProbe = argc == 5 && !strcmp(argv[1], "--auth-probe");
+        bool controlProbe = authProbe || (argc == 3 && !strcmp(argv[1], "--control-probe"));
         bool synProbe = controlProbe || (argc == 3 && !strcmp(argv[1], "--syn-probe"));
-        if (argc == 3 && (!strcmp(argv[1], "--listen") || synProbe)) {
+        if ((argc == 3 || authProbe) && (!strcmp(argv[1], "--listen") || synProbe)) {
             char *end = nullptr;
             long value = strtol(argv[2], &end, 10);
             if (!end || *end || value < 1 || value > 60) {
@@ -47,7 +51,22 @@ int main(int argc, const char **argv) {
         BOOL configure = listenSeconds || (argc == 2 && !strcmp(argv[1], "--configure"));
         BOOL open = configure || (argc == 2 && !strcmp(argv[1], "--open"));
         if (argc != 1 && !open) {
-            fprintf(stderr, "usage: mac-usb-interface [--open | --configure | --listen SECONDS | --syn-probe SECONDS | --control-probe SECONDS]\n"); return 2;
+            fprintf(stderr, "usage: mac-usb-interface [--open | --configure | --listen SECONDS | --syn-probe SECONDS | --control-probe SECONDS | --auth-probe SECONDS CERT.der KEY.der]\n"); return 2;
+        }
+        NSData *certificate = nil;
+        SecKeyRef testKey = nullptr;
+        if (authProbe) {
+            certificate = [NSData dataWithContentsOfFile:@(argv[3])];
+            NSData *keyData = [NSData dataWithContentsOfFile:@(argv[4])];
+            if (certificate.length <= 640 || certificate.length > 2048 || !keyData.length || keyData.length > 4096) {
+                fprintf(stderr, "Requires bounded locally generated RSA-2048 DER test credentials\n"); return 2;
+            }
+            NSDictionary *attributes = @{(__bridge id)kSecAttrKeyType: (__bridge id)kSecAttrKeyTypeRSA,
+                (__bridge id)kSecAttrKeyClass: (__bridge id)kSecAttrKeyClassPrivate, (__bridge id)kSecAttrKeySizeInBits: @2048};
+            CFErrorRef keyError = nullptr;
+            testKey = SecKeyCreateWithData((__bridge CFDataRef)keyData, (__bridge CFDictionaryRef)attributes, &keyError);
+            if (keyError) CFRelease(keyError);
+            if (!testKey) { fprintf(stderr, "Could not import the local test key\n"); return 2; }
         }
         NSMutableDictionary *report = [@{@"role_switch_sent": @NO, @"data_transfer_attempted": @NO,
             @"configure_requested": @(configure)} mutableCopy];
@@ -141,6 +160,7 @@ int main(int argc, const char **argv) {
                                 NSDictionary *previous = nil;
                                 unsigned totalReceived = 0, writes = 0;
                                 bool configured = false, synSent = false, ackSent = false;
+                                std::unique_ptr<iap2probe::AuthProbe> authentication;
                                 const uint8_t detect[] = {0xff, 0x55, 0x02, 0x00, 0xee, 0x10};
                                 auto start = std::chrono::steady_clock::now();
                                 auto nextDetect = start;
@@ -202,7 +222,28 @@ int main(int argc, const char **argv) {
                                                     synSent = true;
                                                 } else if (ackSent) {
                                                     report[@"control_transfer_captured"] = @YES;
-                                                    break;
+                                                    if (!authProbe) break;
+                                                    std::vector<iap2probe::Bytes> replies;
+                                                    bool valid = authentication->feed(buffer, bytes, replies);
+                                                    NSMutableArray *messages = [NSMutableArray array];
+                                                    for (auto id : authentication->messages) [messages addObject:[NSString stringWithFormat:@"0x%04x", id]];
+                                                    report[@"control_messages"] = messages;
+                                                    report[@"authentication_succeeded"] = @(authentication->authenticated);
+                                                    report[@"identification_requested"] = @(authentication->identificationRequested);
+                                                    if (!valid) {
+                                                        report[@"error"] = @(authentication->error.c_str());
+                                                        operation = kIOReturnBadArgument; break;
+                                                    }
+                                                    for (const auto &reply : replies) {
+                                                        if (reply.size() > size) { operation = kIOReturnBadArgument; break; }
+                                                        memcpy(buffer, reply.data(), reply.size());
+                                                        uint64_t sendArgs[] = {[report[@"pipes"][1][@"id"] unsignedLongLongValue], mapping[2], reply.size(), 100};
+                                                        uint64_t sent = 0; uint32_t sendCount = 1;
+                                                        operation = IOConnectCallScalarMethod(connection, 14, sendArgs, 4, &sent, &sendCount);
+                                                        if (!operation && (sendCount != 1 || sent != reply.size())) operation = kIOReturnUnderrun;
+                                                        if (operation) break;
+                                                    }
+                                                    if (operation || authentication->done()) break;
                                                 } else if (synSent) {
                                                     report[@"syn_response_captured"] = @YES;
                                                     bool valid = iap2probe::controlSynAck(buffer, bytes);
@@ -211,6 +252,24 @@ int main(int argc, const char **argv) {
                                                     if (!valid) {
                                                         report[@"error"] = @"Peer offer is outside this probe's supported format; no ACK sent";
                                                         operation = kIOReturnBadArgument; break;
+                                                    }
+                                                    if (authProbe) {
+                                                        const auto *certBytes = static_cast<const uint8_t *>(certificate.bytes);
+                                                        authentication.reset(new iap2probe::AuthProbe(buffer[5],
+                                                            iap2probe::Bytes(certBytes, certBytes + certificate.length),
+                                                            [testKey](const iap2probe::Bytes &challenge) {
+                                                                NSData *digest = [NSData dataWithBytes:challenge.data() length:challenge.size()];
+                                                                CFErrorRef error = nullptr;
+                                                                CFDataRef signature = SecKeyCreateSignature(testKey, kSecKeyAlgorithmRSASignatureDigestPKCS1v15SHA1,
+                                                                    (__bridge CFDataRef)digest, &error);
+                                                                iap2probe::Bytes result;
+                                                                if (signature) {
+                                                                    auto p = CFDataGetBytePtr(signature);
+                                                                    result.assign(p, p + CFDataGetLength(signature)); CFRelease(signature);
+                                                                }
+                                                                if (error) CFRelease(error);
+                                                                return result;
+                                                            }));
                                                     }
                                                     uint8_t ack[9]; iap2probe::makeAck(buffer[5], ack);
                                                     memcpy(buffer, ack, sizeof(ack));
@@ -257,6 +316,7 @@ int main(int argc, const char **argv) {
             IOObjectRelease(controller);
         }
         if (selected) IOObjectRelease(selected);
+        if (testKey) CFRelease(testKey);
         report[@"result"] = result(operation);
         NSError *error = nil;
         NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted|NSJSONWritingSortedKeys error:&error];

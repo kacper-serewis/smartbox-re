@@ -27,7 +27,7 @@ def main():
     source = ROOT / 'experiments/macos-usb/interface_probe.mm'
     binary = output / 'mac-usb-interface'
     build = subprocess.run(['xcrun', 'clang++', '-std=c++14', '-O2', '-Wall', '-Wextra', '-Werror', '-fobjc-arc',
-                            '-framework', 'Foundation', '-framework', 'IOKit', str(source), '-o', str(binary)],
+                            '-framework', 'Foundation', '-framework', 'IOKit', '-framework', 'Security', str(source), '-o', str(binary)],
                            capture_output=True, text=True, timeout=60)
     (output / 'build.log').write_text(build.stdout + build.stderr)
     if build.returncode:
