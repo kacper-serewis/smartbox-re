@@ -89,6 +89,12 @@ static size_t start_code(const unsigned char *p, size_t n, size_t pos, size_t *w
 static void device_video(void *cls, raop_ntp_t *ntp, video_decode_struct *data) {
     (void)cls; (void)ntp;
     if (!data || data->is_h265 || !data->data || data->data_len < 5 || data->data_len > 1024 * 1024) return;
+#ifdef SMARTBOX_BENCH
+    if (receiver_state.video && receiver_state.events) {
+        video(&receiver_state, ntp, data);
+        fflush(receiver_state.video); fflush(receiver_state.events);
+    }
+#endif
     pthread_mutex_lock(&frame_lock);
     bool ready;
     pthread_mutex_lock(&mode_lock); ready = mirror_selected && native_ready; pthread_mutex_unlock(&mode_lock);
@@ -303,8 +309,18 @@ __attribute__((constructor)) static void integration_init(void) {
     stock_control = (control_fn)dlsym(RTLD_NEXT, "AirPlayReceiverServerControl");
     stock_start = (start_fn)dlsym(RTLD_NEXT, "CarPlayControlClientStart");
     stock_video = (frame_fn)dlsym(RTLD_DEFAULT, "_Z21carplay_video_processiPvib");
+#ifdef SMARTBOX_BENCH
+    fprintf(stderr, "[bench] control=%p start=%p video=%p\n", (void *)stock_control, (void *)stock_start, (void *)stock_video);
+#endif
     if (!stock_control || !stock_start || !stock_video) return;
     native_bound = native_bind((void *)stock_video);
+#ifdef SMARTBOX_BENCH
+    fprintf(stderr, "[bench] native_bound=%d\n", native_bound);
+    receiver_state.max_bytes = 8 * 1024 * 1024; receiver_state.duration = 120;
+    receiver_state.video = fopen("/tmp/boxupdate/smartbox-bench-video.h264", "wx");
+    receiver_state.events = fopen("/tmp/boxupdate/smartbox-bench-events.jsonl", "wx");
+    if (!receiver_state.video || !receiver_state.events) { perror("bench capture files"); return; }
+#endif
     FILE *f = fopen(MODE_FILE, "r"); char value[32] = {0};
     if (f) { size_t n = fread(value, 1, sizeof(value) - 1, f); fclose(f); mirror_selected = native_bound && n == 10 && !memcmp(value, "mirroring\n", 10); }
     int listener = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -317,5 +333,8 @@ __attribute__((constructor)) static void integration_init(void) {
         close(listener); unlink(CONTROL_SOCKET); mirror_selected = false; return;
     }
     pthread_detach(thread);
+#ifdef SMARTBOX_BENCH
+    fprintf(stderr, "[bench] control ready, mirror_selected=%d\n", mirror_selected);
+#endif
 }
 #endif
