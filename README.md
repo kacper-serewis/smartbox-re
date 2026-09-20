@@ -38,6 +38,11 @@ the computer.
 - [`build_display_firmware.py`](scripts/build_display_firmware.py) builds and
   verifies the v131 density profiles from a locally archived stock image. The
   output becomes device-writing only when installed with `update_device.py`.
+- [Recovery access](experiments/recovery/README.md) adds owner-key SSH and a
+  recovery webpage through an SSH tunnel, with a separate updater running from
+  RAM. The density137.5 recovery image is built locally and requires physical
+  validation; it is not bootloader-level unbricking. The mirroring builder now
+  requires the recovery bundle and current passing recovery tests.
 - The [mirroring build scripts](experiments/mirroring/README.md) are development
   tools. Their components pass local/RV32 tests, but there is currently no safe,
   hardware-validated mirroring image to install.

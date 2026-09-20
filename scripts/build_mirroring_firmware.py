@@ -16,12 +16,16 @@ import tempfile
 from build_display_firmware import ROOT, SOURCE, inventory, sha
 from display_patch import patch
 from update_device import load_release
+from build_recovery_firmware import BUNDLE, install_recovery, verify_bundle, verify_tests
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--density', type=float, choices=(125, 137.5, 150), default=137.5)
+    parser.add_argument('--recovery-bundle', type=Path, default=BUNDLE)
     args = parser.parse_args()
+    verify_bundle(args.recovery_bundle)
+    verify_tests(args.recovery_bundle)
     build = ROOT / 'firmwares/research/mirroring-riscv'
     mode = ROOT / 'firmwares/experiments/connection-mode'
     manifest = json.loads((build / 'manifest.json').read_text())
@@ -52,10 +56,12 @@ def main():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data); target.chmod(mode_bits); os.utime(target, (timestamp, timestamp))
         install('stock/CPAAProxyEx', modified, 0o775)
-        install('bin/CPAAProxyEx', (build / 'smartbox-launch').read_bytes(), 0o775)
+        recovery = install_recovery(tree, baseline, args.recovery_bundle, install, (build / 'smartbox-launch').read_bytes())
         install('lib/libsmartbox-mirror.so', (build / 'libsmartbox-mirror.so').read_bytes(), 0o755)
         install('bin/smartbox-mode', (mode / 'bin/smartbox-mode').read_bytes(), 0o755)
-        (tree / 'bin/smartbox-mode-driver').symlink_to('CPAAProxyEx')
+        # The recovery bootstrap now occupies bin/CPAAProxyEx; driver requests
+        # must still reach the actual mirroring launcher.
+        (tree / 'bin/smartbox-mode-driver').symlink_to('../launch/CPAAProxyEx')
         for name in ('index.html', 'mode.js'):
             install('mode-web/' + name, (mode / 'web' / name).read_bytes())
         for name in ('index_cptowlcp.html', 'index_cptowlcp_en.html'):
@@ -101,10 +107,11 @@ def main():
                    'chunk_metadata': {'result': 1, 'version': 131, 'pos': 0, 'itemsize': step, 'count': (len(raw) + step - 1) // step, 'filesize': len(raw), 'datasize': step},
                    'changed_stock_files': changed, 'added_files': sorted(set(new) - set(old)), 'density_patch': density,
                    'receiver_build': manifest,
+                   'recovery_build': recovery,
                    'limitations': ['No physical dongle/Corsa mirroring test yet', 'No full iOS pairing test yet',
                                    'Video passthrough only; no audio, touch, scaling, or rotation adaptation',
                                    'Head unit acceptance of phone-selected H.264 geometry is unverified'],
-                   'recovery': 'External supervisor; persistent disable latch on app failure; three original-app attempts; independent mode page; not hardware validated',
+                   'recovery': 'Independent RAM service, key-only SSH, tunneled recovery page and updater; persistent experiment latch; not hardware validated',
                    'verification': 'Image fits partition; re-extraction matches inputs; stock files unchanged except launcher and two configuration pages; relocated stock app has density metadata patch.'}
         (output / 'manifest.json').write_text(json.dumps(release, indent=2) + '\n')
         load_release(output)
