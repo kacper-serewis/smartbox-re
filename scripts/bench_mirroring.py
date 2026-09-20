@@ -51,7 +51,8 @@ def probe(recovery):
     return apps[0]
 
 
-def prepare(recovery, refresh=False):
+def prepare(recovery, refresh=False, mode='mirroring'):
+    if mode not in ('carplay', 'mirroring'):raise ValueError('Invalid bench mode')
     app=probe(recovery)
     result=recovery.diagnostic(f'if test -e {REMOTE}; then echo EXISTS; fi')
     if 'EXISTS' in result and not refresh:raise ValueError('Bench directory already exists; use its saved session instead')
@@ -78,8 +79,8 @@ def prepare(recovery, refresh=False):
         transfer(recovery,helper,BUILD/source,temporary)
         recovery.diagnostic(f'mv {temporary} {REMOTE}/{target}')
         files[target]=dict(sha256=hashlib.sha256((BUILD/source).read_bytes()).hexdigest(),md5=hashlib.md5((BUILD/source).read_bytes()).hexdigest())
-    recovery.diagnostic(f"chmod 700 {REMOTE}/launcher; printf 'mirroring\\n' > {REMOTE}/state/connection-mode")
-    session=dict(remote=REMOTE,files=files,original=app,temporary_only=True)
+    recovery.diagnostic(f"chmod 700 {REMOTE}/launcher; printf '{mode}\\n' > {REMOTE}/state/connection-mode")
+    session=dict(remote=REMOTE,files=files,original=app,temporary_only=True,mode=mode)
     (recovery.output/'bench-session.json').write_text(json.dumps(session,indent=2)+'\n')
     recovery.diagnostic(f'rm -f {REMOTE}/refresh-pending')
     return session
@@ -90,6 +91,7 @@ def main():
     parser.add_argument('action',choices=['prepare','refresh','start','status','stop','collect'])
     parser.add_argument('--session',type=Path)
     parser.add_argument('--seconds',type=int,default=300)
+    parser.add_argument('--mode',choices=['carplay','mirroring'],default='mirroring',help='Mode installed by prepare/refresh; start uses the saved mode')
     args=parser.parse_args()
     if not 10<=args.seconds<=300:parser.error('Duration must be 10..300 seconds')
     if args.action!='prepare' and not args.session:parser.error('--session is required')
@@ -99,12 +101,16 @@ def main():
     r.sequence=len(list(output.glob('*-diagnostic.txt')))+100
     print('Evidence:',output,flush=True)
     if args.action in ('prepare','refresh'):
-        print(json.dumps(prepare(r,args.action=='refresh'),indent=2));return
+        print(json.dumps(prepare(r,args.action=='refresh',args.mode),indent=2));return
     session=json.loads((output/'bench-session.json').read_text())
     if session['remote']!=REMOTE:raise ValueError('Unexpected bench path')
     r.check_identity()
     if args.action=='start':
         app=probe(r)
+        mode=session.get('mode','mirroring')
+        if mode not in ('carplay','mirroring'):raise ValueError('Invalid saved bench mode')
+        remote_mode=r.diagnostic(f'cat {REMOTE}/state/connection-mode').strip()
+        if remote_mode!=mode:raise ValueError('Remote mode differs from saved session')
         checks=r.diagnostic(f'md5sum {REMOTE}/launcher {REMOTE}/libsmartbox-mirror.so {REMOTE}/libsocket-reuse.so; if test -e {REMOTE}/started; then echo STARTED; fi; if test -e {REMOTE}/refresh-pending; then echo PENDING; fi')
         if 'PENDING' in checks:raise ValueError('Previous refresh incomplete')
         for source,target in [('libsmartbox-bench.so','libsmartbox-mirror.so'),('smartbox-bench','launcher'),('libsocket-reuse.so','libsocket-reuse.so')]:
@@ -112,7 +118,7 @@ def main():
         if 'STARTED' in checks:raise ValueError('This bench session has already run')
         for target,item in session['files'].items():
             if not re.search('^'+item['md5']+r'\s+'+re.escape(REMOTE+'/'+target)+'$',checks,re.M):raise ValueError('Bench payload changed')
-        command=(f'if test -e /tmp/boxupdate/smartbox-bench.log; then mv /tmp/boxupdate/smartbox-bench.log /tmp/boxupdate/smartbox-bench-{r.token}.log; fi; touch {REMOTE}/started; {REMOTE}/launcher {app["pid"]} {app["start_time"]} {args.seconds}'
+        command=(f'if test -e /tmp/boxupdate/smartbox-bench.log; then mv /tmp/boxupdate/smartbox-bench.log /tmp/boxupdate/smartbox-bench-{r.token}.log; fi; touch {REMOTE}/started; {REMOTE}/launcher {app["pid"]} {app["start_time"]} {args.seconds} {mode}'
                  f' </dev/null >/tmp/boxupdate/smartbox-bench.log 2>&1 & echo $! > {REMOTE}/launcher.pid')
         r.diagnostic(command)
     elif args.action=='stop':

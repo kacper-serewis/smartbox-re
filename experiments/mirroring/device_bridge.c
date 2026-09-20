@@ -24,6 +24,13 @@ static pthread_mutex_t mode_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t frame_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool mirror_selected, native_ready, stock_suppressed;
 static bool native_bound;
+static const char *pairing_mode_name(void) {
+    pthread_mutex_lock(&mode_lock);
+    bool mirror = mirror_selected;
+    pthread_mutex_unlock(&mode_lock);
+    return mirror ? "Screen Mirroring" : "CarPlay";
+}
+#include "pairing_label.h"
 static void *saved_server, *saved_client;
 static const void *saved_start_command;
 static raop_t *mirror_server;

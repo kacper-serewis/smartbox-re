@@ -50,7 +50,10 @@ static char **split(char *data) {
 }
 static int control(const char *command) {
     int fd=socket(AF_UNIX,SOCK_STREAM|SOCK_CLOEXEC,0);if(fd<0)return -1;
-    struct timeval tv={0,200000};setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
+    /* Receiver startup includes key creation and DNS registration; it is not a
+     * cheap probe. Allow those operations to finish before declaring failure. */
+    struct timeval tv=!strncmp(command,"start ",6)?(struct timeval){5,0}:(struct timeval){0,200000};
+    setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&tv,sizeof(tv));
     struct sockaddr_un addr={.sun_family=AF_UNIX};strcpy(addr.sun_path,BENCH_SOCKET);
     char reply[4]={0};int ok=connect(fd,(void *)&addr,sizeof(addr))==0 &&
         send(fd,command,strlen(command),MSG_NOSIGNAL)==(ssize_t)strlen(command) && recv(fd,reply,3,MSG_WAITALL)==3 && !strcmp(reply,"OK\n");
@@ -64,7 +67,9 @@ static void end_child(pid_t child) {
     kill(child,SIGKILL);while(waitpid(child,NULL,0)<0&&errno==EINTR){}
 }
 int main(int argc,char **argv) {
-    if(argc!=4)return 2;
+    if(argc!=4&&argc!=5)return 2;
+    const char *mode=argc==5?argv[4]:"mirroring";
+    if(strcmp(mode,"mirroring")&&strcmp(mode,"carplay"))return 2;
     char *tail=NULL;long parsed=strtol(argv[1],&tail,10);if(*tail||parsed<=1||parsed>4194304)return 2;pid_t original=(pid_t)parsed;
     unsigned long long start=strtoull(argv[2],&tail,10);if(*tail||!start)return 2;
     long duration=strtol(argv[3],&tail,10);if(*tail||duration<10||duration>300)return 2;
@@ -101,7 +106,7 @@ int main(int argc,char **argv) {
     fprintf(stderr,"Bench child %ld; deadline %ld seconds\n",(long)child,duration);fflush(stderr);
     while(child>0&&!stopping&&seconds()-began<duration){
         if(waitpid(child,&status,WNOHANG)==child){exited=1;break;}
-        if(!ready&&!control("probe mirroring\n")){if(control("start mirroring\n")){fprintf(stderr,"Receiver start failed\n");break;}ready=1;fprintf(stderr,"Mirroring ready\n");fflush(stderr);}
+        if(!ready&&!control("probe mirroring\n")){if(control(!strcmp(mode,"carplay")?"start carplay\n":"start mirroring\n")){fprintf(stderr,"Receiver start failed\n");break;}ready=1;fprintf(stderr,"Mode ready: %s\n",mode);fflush(stderr);}
         if(!ready&&seconds()-began>15){fprintf(stderr,"Bridge readiness deadline\n");break;}
         usleep(100000);
     }
