@@ -1,5 +1,43 @@
 # Corrected mirroring / automatic restart trial
 
+## Upgrade the installed autorestart build to PIN/status diagnostics
+
+For smartBox-9302 already running the healthy autorestart build, use the new
+guarded helper from the repository directory, with the Mac on its Wi-Fi and
+the USB viewer finished:
+
+```sh
+python3 scripts/update_mirroring.py apply
+```
+
+This command installs
+`firmwares/experiments/hw501_131_mirroring_density137.5_screeninfo`, archive SHA-256
+`dee78e2cd39537176bf3039f749ae63ec6a8e9e76d2e5251b83a61634bf8cd7e`.
+It checks the exact running supervisor and app, refuses recovery or incomplete
+startup, uploads and verifies staging, then gracefully stops the supervisor
+before asking the surviving stock updater to flash. This prevents intentional
+app shutdown during flashing from being treated as a crash and leaving a
+persistent recovery latch. It never clears recovery flags. It verifies flash
+readback after the updater reports completion.
+
+Wait for **Flash readback verified**, then unplug/reconnect once and allow 60
+seconds for boot. The saved mode and pairing identity remain. Reconnect Wi-Fi
+and open `http://192.168.5.1:8081/`; select Screen Mirroring with Save & restart
+if needed. The Mac viewer command below remains unchanged.
+
+Do not rerun `prepare_mirroring_trial.py` for this upgrade: that helper is only
+for the restored stock application before the first experimental install.
+If completion/readback is unconfirmed, keep power connected and inspect the
+saved evidence before retrying. If shutdown occurred but no flash was requested,
+the helper explicitly says to replug to restart the installed application.
+
+Ten mocked upgrade tests passed, including ordering, rejected recovery state,
+PID reuse, failed upload, lost staged state and failed readback. Read-only live
+preflight passed on smartBox-9302; the actual guarded upgrade has not yet been
+run. Use `python3 scripts/update_mirroring.py check` for checks only.
+
+## Earlier first installation from restored stock
+
 Prepared 20 September 2026. This is a new experimental package, separate from
 the withdrawn image described in USER_GUIDE.md and FLASHING.md. It contains the
 corrected video bridge, pairing-screen mode labels, supervisor updater fix,
