@@ -1,8 +1,15 @@
-// Short-lived user-space test of our own iAP2 interface. No role switch or data IO.
+// Bounded user-space test of our own iAP2 interface. Never sends a role switch.
 #import <Foundation/Foundation.h>
 #import <IOKit/IOKitLib.h>
 #import <mach/mach_error.h>
 #include <cstring>
+#include <chrono>
+#include <csignal>
+#include <cstdlib>
+#include <unistd.h>
+
+static volatile sig_atomic_t interrupted = 0;
+static void interruptHandler(int) { interrupted = 1; }
 
 static NSString *const controllerPath = @"IOService:/AppleARMPE/arm-io@10F00000/AppleSoCIO/usb-drd1@AA280000/AppleT8142USBXDCI@1";
 static NSDictionary *properties(io_registry_entry_t entry) {
@@ -25,10 +32,19 @@ static bool disconnected(io_registry_entry_t controller) {
 }
 int main(int argc, const char **argv) {
     @autoreleasepool {
-        BOOL configure = argc == 2 && !strcmp(argv[1], "--configure");
+        unsigned listenSeconds = 0;
+        if (argc == 3 && !strcmp(argv[1], "--listen")) {
+            char *end = nullptr;
+            long value = strtol(argv[2], &end, 10);
+            if (!end || *end || value < 1 || value > 60) {
+                fprintf(stderr, "Listen duration must be 1..60 seconds\n"); return 2;
+            }
+            listenSeconds = (unsigned)value;
+        }
+        BOOL configure = listenSeconds || (argc == 2 && !strcmp(argv[1], "--configure"));
         BOOL open = configure || (argc == 2 && !strcmp(argv[1], "--open"));
         if (argc != 1 && !open) {
-            fprintf(stderr, "usage: mac-usb-interface [--open | --configure]\n"); return 2;
+            fprintf(stderr, "usage: mac-usb-interface [--open | --configure | --listen SECONDS]\n"); return 2;
         }
         NSMutableDictionary *report = [@{@"role_switch_sent": @NO, @"data_transfer_attempted": @NO,
             @"configure_requested": @(configure)} mutableCopy];
@@ -106,6 +122,73 @@ int main(int argc, const char **argv) {
                             if (!disconnected(controller)) return kIOReturnNotReady;
                             return call(@"commit_configuration", 11, nullptr, 0, nullptr, 0);
                         }();
+                    }
+                    if (listenSeconds && operation == kIOReturnSuccess) {
+                        signal(SIGINT, interruptHandler); signal(SIGTERM, interruptHandler);
+                        uint64_t size = 4096, mapping[3] = {};
+                        operation = call(@"allocate_buffer", 18, &size, 1, mapping, 3);
+                        if (operation == kIOReturnSuccess) {
+                            // The mapped buffer belongs to this user client; no caller pointers enter the kernel.
+                            if (!mapping[0] || mapping[1] < size) operation = kIOReturnBadArgument;
+                            else {
+                                auto *buffer = reinterpret_cast<unsigned char *>(mapping[0]);
+                                NSMutableArray *states = [NSMutableArray array], *received = [NSMutableArray array], *detectWrites = [NSMutableArray array];
+                                NSDictionary *previous = nil;
+                                unsigned totalReceived = 0, writes = 0;
+                                bool configured = false;
+                                const uint8_t detect[] = {0xff, 0x55, 0x02, 0x00, 0xee, 0x10};
+                                auto start = std::chrono::steady_clock::now();
+                                auto nextDetect = start;
+                                fprintf(stderr, "READY: SmartBoxIAP2 committed; listening for %u seconds\n", listenSeconds);
+                                fflush(stderr);
+                                while (!interrupted && std::chrono::steady_clock::now() - start < std::chrono::seconds(listenSeconds)) {
+                                    NSDictionary *state = properties(controller)[@"CurrentState"] ?: @{};
+                                    if (![state isEqual:previous]) {
+                                        if (states.count < 128) [states addObject:state];
+                                        previous = state;
+                                    }
+                                    if ([state[@"OnBus"] isEqual:@YES] && [state[@"SelectedConfiguration"] unsignedIntValue] > 0) {
+                                        configured = true;
+                                        report[@"data_transfer_attempted"] = @YES;
+                                        if (writes < 3 && std::chrono::steady_clock::now() >= nextDetect) {
+                                            memcpy(buffer, detect, sizeof(detect));
+                                            uint64_t args[] = {[report[@"pipes"][1][@"id"] unsignedLongLongValue], mapping[2], sizeof(detect), 100};
+                                            uint64_t bytes = 0; uint32_t count = 1;
+                                            IOReturn r = IOConnectCallScalarMethod(connection, 14, args, 4, &bytes, &count);
+                                            [detectWrites addObject:@{@"result": result(r), @"bytes": @(bytes)}];
+                                            writes++;
+                                            nextDetect = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
+                                            if (r && r != kIOReturnTimeout && (uint32_t)r != 0xe0000001) {
+                                                operation = r; break;
+                                            }
+                                        }
+                                        uint64_t args[] = {[report[@"pipes"][0][@"id"] unsignedLongLongValue], mapping[2], size, 100};
+                                        uint64_t bytes = 0; uint32_t count = 1;
+                                        IOReturn r = IOConnectCallScalarMethod(connection, 13, args, 4, &bytes, &count);
+                                        if (!r) {
+                                            if (count != 1 || bytes > size) { operation = kIOReturnBadArgument; break; }
+                                            if (bytes) {
+                                                NSMutableString *hex = [NSMutableString string];
+                                                for (uint64_t i = 0; i < bytes; ++i) [hex appendFormat:@"%02x", buffer[i]];
+                                                [received addObject:hex]; totalReceived += (unsigned)bytes;
+                                                if (totalReceived >= 16384) break;
+                                            }
+                                        } else if (r != kIOReturnTimeout && (uint32_t)r != 0xe0000001) {
+                                            report[@"read_error"] = result(r); operation = r; break;
+                                        }
+                                    }
+                                    usleep(100000);
+                                }
+                                report[@"state_changes"] = states;
+                                report[@"observed_configured"] = @(configured);
+                                report[@"detect_writes"] = detectWrites;
+                                report[@"received_hex"] = received;
+                                report[@"received_bytes"] = @(totalReceived);
+                                report[@"interrupted"] = @(interrupted != 0);
+                            }
+                            IOReturn release = call(@"release_buffer", 19, &mapping[2], 1, nullptr, 0);
+                            if (!operation) operation = release;
+                        }
                     }
                     report[@"interface_after"] = properties(selected);
                     if (opened) {
