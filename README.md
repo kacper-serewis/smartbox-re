@@ -1,5 +1,7 @@
 # Smartbox HW501 firmware research
 
+> **Disclaimer:** This repository is coordinated by me and was written entirely by GPT-6-Astra.
+
 ## Collect display information offline
 
 With the adapter plugged into the Corsa, connect the iPhone to CarPlay and this Mac to the adapter's Wi-Fi. Internet is not needed. Run:
