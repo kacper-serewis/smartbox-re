@@ -1,9 +1,71 @@
 # Update interruption on smartBox-9302
 
-2026-09-20. Device recovery is **not verified**. Do not reinstall the withdrawn
+2026-09-20. **smartBox-9302 recovered, flash readback and reboot verified.** Do not reinstall the withdrawn
 mirroring archive (`9bbc62e44225839cbf18d1f5c60a23f26d4d534714785a987f372081d62a58a8`).
 
-## Physical evidence
+## Successful physical recovery
+
+The 11:49 offline capture confirmed recovery mode and a working stock diagnostics
+handler. Its archive did not contain the updater termination log. Live inspection
+then confirmed supervisor PID 119, original app PID/PGID 125, and UpdateServer PID
+203 **also in PGID 125**. The cleanup conflict therefore applied on the device.
+
+The stock diagnostics handler expands shell substitutions in its archive filename.
+We used fixed commands through that local handler to inspect processes and deploy
+a 324-byte, syscall-only RV32 session helper into `/tmp`. The source is
+`experiments/emulation/recovery_detach.S`. The device's stripped BusyBox did not
+provide `command`, `setsid`, or `base64`; octal `printf` transfers worked and the
+helper checksum was verified. Early attempts to transfer it through a one-chunk
+upload produced an empty staging file; checksum guards stopped before execution
+or any flash request. The final recovery utility uses only the verified octal
+transfer path.
+
+The helper called `setsid` and executed the unchanged stock `/tmp/UpdateServer`
+on port 8082. PID/PGID/session 1745 were verified, with no `/mnt/app` mappings and
+a `/tmp` working directory. It survived the shutdown that killed the original
+updater. The density137.5 archive was staged and flashed to **100%**.
+
+Evidence:
+
+- `device-snapshots/recovery-prepare-20260920T115829.288498Z`: helper checksum,
+  independent session, process table and mappings.
+- `device-snapshots/recovery-restore-20260920T115908.494544Z`: all upload
+  acknowledgements and flash status, including 100%.
+- `readback.json` in that restore directory: application partition readback over
+  the exact image length matches MD5 `3d2016e72ac2710964e034980b0dd2e6`.
+- `after-reboot/verification.json`: device restarted, only one CPAAProxyEx process,
+  no smartbox-mode, and executable MD5 `809d9b880681b3d8ff583401993ed1c2` matches
+  the earlier density137.5 binary. The normal port-80 updater responds again.
+
+CarPlay in the Corsa was not retested during this PC-connected recovery. The
+mirroring feature is removed; density137.5 is preserved. The temporary updater
+and helper disappear at reboot. Persistent recovery flags were left untouched;
+the restored density-only image does not use them.
+
+The reproducible offline recovery utility is `scripts/recover_updater.py`, with
+`probe` and `restore` actions. It defaults specifically to smartBox-9302 and pins
+the inspected updater, detachment helper, and rollback image. It refuses a device
+without the two expected CPAAProxyEx processes, including this now-recovered one.
+
+Helper build (local toolchain/container already available):
+
+```sh
+docker run --rm --platform linux/amd64 --network none --read-only \
+  --tmpfs /tmp:rw,exec,nosuid,size=16m -v "$PWD:/work" \
+  smartbox-mirror-builder:local \
+  /work/firmwares/research/mirror-deps/riscv32-ilp32d--glibc--bleeding-edge-2021.11-1/bin/riscv32-buildroot-linux-gnu-gcc \
+  -nostdlib -static -march=rv32im -mabi=ilp32 \
+  -Wl,--build-id=none,-z,noexecstack,-s \
+  -o /work/firmwares/research/recovery/detach \
+  /work/experiments/emulation/recovery_detach.S
+```
+
+Helper SHA-256:
+`ebaf99fd64ec30a622cd32ca4b3ed20be84bc1339a6f5b51ab34f1ef2ca2b6b6`.
+QEMU checks verified a new session, preserved arguments/environment, and failure
+with exit 127 for missing arguments or an unsuccessful setsid call.
+
+## Original failure evidence
 
 - smartBox-9302: HW501, app 131/build 2026081801, system 20250811. Snapshots
   `20260920T101342.935799Z` through `20260920T101720.957396Z` show successful
@@ -64,9 +126,9 @@ are disposable Linux processes; these are not hardware flash/recovery tests.
 `test_update_device.py`: five protocol/rejection tests passed. The actual withdrawn
 archive hash is rejected before staging, regardless of its manifest label.
 
-No corrected flash release has been prepared or installed as part of this fix.
+No corrected mirroring release has been prepared or installed as part of this fix.
 Repeating a regular update through the installed supervisor can hit the same bug.
 Do not clear recovery or factory-reset as a workaround for the process-group bug.
-Next evidence: collect stock logs plus both mode APIs and update status on the
-affected device with `python3 scripts/collect_device.py --mirroring --seconds 10`.
-The collector requires adapter Wi-Fi but no internet, and never stages or flashes.
+The diagnostic capture and subsequent live recovery above completed this next
+investigation step. Ordinary firmware updates must use the normal updater after
+recovery; do not run the recovery utility again on the restored device.
