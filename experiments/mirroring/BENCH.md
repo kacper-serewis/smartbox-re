@@ -22,6 +22,9 @@ Save the printed evidence directory as `BENCH_SESSION`. If the RAM directory
 already exists from an earlier test, use that test's saved directory and run
 `refresh` instead of `prepare`. Refresh refuses a running experimental app.
 It removes the previous RAM capture, so collect evidence first.
+`prepare` and `refresh` also accept `--mode carplay` to test the normal mode with
+the bridge loaded, including the [pairing-screen mode label](../../reports/overlay/pairing-mode-label.md).
+`start` uses and validates the mode recorded by preparation.
 
 ```sh
 python3 scripts/bench_mirroring.py start --session "$BENCH_SESSION" --seconds 300
