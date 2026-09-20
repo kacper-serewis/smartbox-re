@@ -1,5 +1,7 @@
 # Experimental HW501 mirroring image
 
+For the step-by-step car-side procedure, use the [offline user guide](USER_GUIDE.md).
+
 The local update is built at:
 
 `firmwares/experiments/hw501_131_mirroring_density137.5/hw501_131.tar`
