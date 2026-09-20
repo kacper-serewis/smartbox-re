@@ -2,6 +2,9 @@
 
 The USB receiver now captures and decodes the dongle pairing screen and iPhone
 CarPlay output. See [the preview guide and validation](HEADUNIT-PREVIEW.md).
+The runnable receiver now lives in the public
+[smartbox-carplay-viewer](https://github.com/kacper-serewis/smartbox-carplay-viewer)
+repository; this directory retains the reverse-engineering evidence.
 The request-observer-only limitations below describe the earlier investigation.
 
 # Mac receiver authentication and identification
@@ -61,9 +64,9 @@ address, discovered through IORegistry rather than assuming an interface name.
 ## Repeatable probes
 
 ```sh
-python3 scripts/mac_usb_session_probe.py --run --stage auth
-python3 scripts/mac_usb_session_probe.py --run --stage identify --collect-network
-python3 scripts/mac_usb_session_probe.py --run --stage network --collect-network
+carplay-viewer --run --stage auth
+carplay-viewer --run --stage identify
+carplay-viewer --run --stage network --preview --seconds 45
 ```
 
 The default stage remains the earlier control-message capture. Authentication

@@ -143,12 +143,15 @@ With index 0, the live tests exchanged DETECT, SYN, SYN-ACK, ACK, and received t
 first control message: `0xAA00`, RequestAuthenticationCertificate. The dongle also
 bound `cdc_ncm` and created `usb0`; IP connectivity/video have not been tested.
 
-Repeat the scoped test with the already-loaded protocol-3 bridge:
+The session runner was extracted to the public
+[smartbox-carplay-viewer](https://github.com/kacper-serewis/smartbox-carplay-viewer)
+repository. Repeat the scoped test from that checkout with the already-loaded
+protocol-3 bridge:
 
 ```sh
-python3 scripts/mac_usb_session_probe.py                # build and read-only status
-python3 scripts/mac_usb_session_probe.py --run          # through first control transfer
-python3 scripts/mac_usb_session_probe.py --run --stage detect
+carplay-viewer                         # build and read-only status
+carplay-viewer --run                   # through first control transfer
+carplay-viewer --run --stage detect
 ```
 
 Native administrator dialogs authorize the bridge's temporary publication and
@@ -180,15 +183,16 @@ and verifying host-mode restoration, the original descriptor, and release-off.
 The later `--stage auth` and `--stage identify` probes generate a local test
 certificate/key and have received authentication success and identification
 acceptance from this owned HW501. They require no MFi key from the car and make
-no firmware changes. The network stage now receives and decodes the dongle video output. Use
-`.venv/bin/python scripts/mac_usb_session_probe.py --run --stage network --preview --seconds 45`
-for a bounded browser preview; see the [preview guide](../../reports/overlay/mac-auth-analysis/HEADUNIT-PREVIEW.md). See the [evidence and protocol limits](../../reports/overlay/mac-auth-analysis/README.md).
+no firmware changes. The network stage now receives and decodes the dongle video
+output. `carplay-viewer --run --stage network --preview --seconds 45` from the
+standalone repository provides a bounded browser preview; see the
+[preview guide](../../reports/overlay/mac-auth-analysis/HEADUNIT-PREVIEW.md).
+See the [evidence and protocol limits](../../reports/overlay/mac-auth-analysis/README.md).
 
 ```sh
-python3 scripts/mac_usb_session_probe.py --run --stage identify --collect-network
+carplay-viewer --run --stage identify
 ```
 
-`--collect-network` adds read-only diagnostics over the dongle's Wi-Fi. Omit it
-when that Wi-Fi connection is unavailable. Test keys stay in the local private
-evidence directory. Authentication here only establishes this dongle's behavior;
-it does not establish compatibility with real iPhone authentication.
+Test keys stay in the local private evidence directory. Authentication here only
+establishes this dongle's behavior; it does not establish compatibility with real
+iPhone authentication.

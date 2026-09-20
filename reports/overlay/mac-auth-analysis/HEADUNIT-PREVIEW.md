@@ -1,5 +1,9 @@
 # Mac head-unit preview
 
+> The runnable viewer has moved to the public
+> [smartbox-carplay-viewer](https://github.com/kacper-serewis/smartbox-carplay-viewer)
+> repository. This page is retained as the original HW501 validation record.
+
 The owned HW501 smartBox-9302 now sends its real wired CarPlay output to the Mac
 through the existing USB-C to USB-A adapter. This includes the dongle's Bluetooth
 pairing screen and an attached iPhone's CarPlay interface. It is not the earlier
@@ -7,11 +11,11 @@ Wi-Fi mirror capture or a reconstruction of the dongle's screen.
 
 ## Run
 
-On this already-prepared Mac, with the protocol-3 bridge loaded:
+Follow the standalone repository's installation guide. With its protocol-3
+bridge loaded:
 
 ```sh
-.venv/bin/python -m pip install -r scripts/requirements-mac-headunit.txt
-.venv/bin/python scripts/mac_usb_session_probe.py --run --stage network --preview --seconds 45
+carplay-viewer --run --stage network --preview --seconds 45
 ```
 
 The browser opens automatically. Native administrator dialogs publish and restore
@@ -86,11 +90,8 @@ a subsequent capture worked without another power cycle.
 ## Checks
 
 ```sh
-.venv/bin/python scripts/test_mac_carplay_observer.py
-xcrun clang++ -std=c++14 -Wall -Wextra -Werror -fsanitize=address,undefined \
-  experiments/macos-usb/iap2_auth_probe_test.cpp \
-  -o device-snapshots/mac-auth-tests/iap2_auth_probe_test
-device-snapshots/mac-auth-tests/iap2_auth_probe_test
+python -m unittest discover -s tests -v
+carplay-viewer-driver test
 ```
 
 The Python tests check peer-side signature verification, malformed key requests,
