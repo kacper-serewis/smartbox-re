@@ -123,6 +123,54 @@ python3 scripts/mac_usb_interface.py --configure
 Default mode only inspects interface properties. `--configure` requires an
 already-published `SmartBoxIAP2` on the exact prepared controller in disconnected
 device mode; it refuses an absent custom interface and never opens the native
-NCM functions. It allocates endpoints, commits, and closes immediately. It does
-not hold a receiver session or exchange iAP2 packets. Restore the configuration
-through the bridge after a publication experiment.
+NCM functions. `--configure` allocates endpoints, commits, and closes immediately.
+The separate listening modes below exchange limited iAP2 packets. Restore the
+configuration through the bridge after a publication experiment.
+
+## USB role switching and iAP2 verified
+
+Later tests on the same Mac, using the dongle's USB-A plug through its USB-C
+adapter, successfully enumerated the Mac as a 480 Mbps USB device. The dongle's
+`0x51` vendor request alone did not change the Mac's role. The scoped user-space
+role helper also opens the matching port's `IOAccessoryManager` and temporarily
+sets USB mode 0 (device), then restores the saved mode 2 (host) after 15 seconds.
+This does not call the separate power/current control methods.
+
+The interface API takes **zero-based configuration indices**. Class/endpoint
+configuration must use index 0, while the on-wire configuration value is 1.
+Using index 1 created inactive endpoints and returned `0xe0000001` on transfers.
+With index 0, the live tests exchanged DETECT, SYN, SYN-ACK, ACK, and received the
+first control message: `0xAA00`, RequestAuthenticationCertificate. The dongle also
+bound `cdc_ncm` and created `usb0`; IP connectivity/video have not been tested.
+
+Repeat the scoped test with the already-loaded protocol-3 bridge:
+
+```sh
+python3 scripts/mac_usb_session_probe.py                # build and read-only status
+python3 scripts/mac_usb_session_probe.py --run          # through first control transfer
+python3 scripts/mac_usb_session_probe.py --run --stage detect
+```
+
+Native administrator dialogs authorize the bridge's temporary publication and
+restoration operations. No kernel rebuild, reinstall, firmware flash, or reboot
+is needed. The helper checks the exact owned dongle and prepared port. It opens
+the custom interface immediately after publication to avoid Apple's unclaimed
+interface fallback. The runner restores the host role, forces device mode off
+bus, restores the original descriptor, and releases the force-off.
+
+This is a **probe**, not a complete receiver. It accepts only the tested single
+control-session SYN-ACK format, checks checksums and sequence acknowledgement,
+and captures one subsequent transfer without responding to authentication. It
+does not implement stream reassembly or general link retransmission. A blocked
+synchronous USB read has been observed to outlast its requested 100 ms timeout;
+the independent role helper's 15-second restore disconnects and releases it.
+Use the orchestrator for live tests, not a standalone listener without cleanup.
+A stuck kernel call or killed role helper can still require manual recovery.
+
+Evidence: `device-snapshots/mac-role-switch-20260920T164711.438482Z/` subdirectories
+`combined-role`, `config-index-zero`, `syn-probe`, and `control-probe`. All three
+cleanup requests and the original-configuration comparison passed after each
+completed test. SYN-ACK validation/ACK encoding tests pass with ASan/UBSan.
+The tracked orchestrator also completed end to end in
+`device-snapshots/mac-usb-session-20260920T171500.199329Z`, reproducing `0xAA00`
+and verifying host-mode restoration, the original descriptor, and release-off.

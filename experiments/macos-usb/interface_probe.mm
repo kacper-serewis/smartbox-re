@@ -180,7 +180,7 @@ int main(int argc, const char **argv) {
                                                 [received addObject:hex]; totalReceived += (unsigned)bytes;
                                                 // Single bounded synchronization offer after a complete
                                                 // DETECT echo. Capture the peer's next transfer without
-                                                // acknowledging or starting authentication/session traffic.
+                                                // acknowledging unless explicitly in control-probe mode.
                                                 if (!synSent && bytes == sizeof(detect) && !memcmp(buffer, detect, sizeof(detect))) {
                                                     report[@"detect_echo_received"] = @YES;
                                                     if (!synProbe) break;

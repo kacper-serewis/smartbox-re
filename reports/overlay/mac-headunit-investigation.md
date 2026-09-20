@@ -190,3 +190,32 @@ available. A Mac decoder result would still not prove Corsa decoder behavior.
 
 The native sender tests and Swift preview compile successfully, but there is
 currently **no working complete dongle-display preview or head-unit emulator**.
+
+## Native USB transport and first control message verified
+
+The subsequent user-space tests work through the existing USB-C to USB-A
+adapter. A bounded Mac data-role override plus the dongle's `0x51` request
+enumerates the Mac at 480 Mbps. The endpoint API required configuration index
+0, distinct from on-wire configuration value 1. Correcting this enabled actual
+bidirectional bulk transfers, not merely enumeration.
+
+The `control-probe` capture contains:
+
+```text
+RX DETECT:  ff550200ee10
+RX SYN-ACK: ff5a0017c0c9000007017fffff07d000c80303010001db
+RX control: ff5a001040ca00018c40400006aa00d0
+```
+
+The SYN-ACK and control packet checksums validate. After our final ACK, the
+dongle requests `RequestAuthenticationCertificate` (`0xAA00`) on control session
+1. The message ID is also defined in the
+[iAP2 dissector implementation](https://gist.github.com/JJTech0130/78527c600f7b4d0a7aeb294eab06d8ba).
+No certificate or challenge response was supplied. Authentication, accessory
+identification, and the network/video session remain unimplemented. The dongle
+created `usb0` using `cdc_ncm`, but this does not yet establish an IP session.
+
+The tests restored Mac host mode and the original USB descriptor successfully;
+no firmware changed or reboot was needed. Repeatable scoped tooling and limits
+are in [BRIDGE.md](../../experiments/macos-usb/BRIDGE.md#usb-role-switching-and-iap2-verified).
+Evidence: `device-snapshots/mac-role-switch-20260920T164711.438482Z/control-probe`.
