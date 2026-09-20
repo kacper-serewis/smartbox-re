@@ -45,11 +45,17 @@ fetch('/api/mode', {cache: 'no-store'}).then(responseJSON).then(render).catch(()
 });
 async function receiverStatus() {
   const target = document.querySelector('#mirror-status');
-  if (!state || state.active !== 'mirroring' || state.lab) {target.hidden = true; return;}
-  target.hidden = false;
+  if (!state || state.lab) {target.hidden = true; return;}
+  target.hidden = state.active !== 'mirroring';
   try {
     const value = await responseJSON(await fetch('/api/mirror', {cache: 'no-store'}));
-    if (/^\d{4}$/.test(value.pin)) target.textContent = `Choose SmartBox Mirror on your iPhone. AirPlay pairing code: ${value.pin}`;
+    if (value.state === 'recovery') {
+      target.hidden = false;
+      target.textContent = value.reason === 'original_app_failed'
+        ? 'Recovery mode: mirroring is disabled. The original application also failed to stay running. Automatic retries have stopped.'
+        : 'Recovery mode: mirroring is disabled after an application failure or incomplete startup. The original application is being used; check CarPlay on the car display.';
+    }
+    else if (/^\d{4}$/.test(value.pin)) target.textContent = `Choose SmartBox Mirror on your iPhone. AirPlay pairing code: ${value.pin}`;
     else if (value.state === 'forwarding_unverified') target.textContent = `Sending video to the car (${value.frames_forwarded} frames). Check the car display for the picture.`;
     else if (value.state === 'waiting') target.textContent = 'On your iPhone, open Screen Mirroring and select SmartBox Mirror. Keep this page open for the pairing code.';
     else if (value.state === 'waiting_for_stock_app') target.textContent = 'Waiting for the adapter’s CarPlay transport to start.';

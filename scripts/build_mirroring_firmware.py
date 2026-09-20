@@ -33,6 +33,8 @@ def main():
             raise ValueError(f'Build manifest mismatch: {name}')
     output = ROOT / f'firmwares/experiments/hw501_131_mirroring_density{args.density:g}'
     output.mkdir(parents=True, exist_ok=True)
+    # Never leave validation for an older archive alongside a newly built image.
+    (output / 'validation.json').unlink(missing_ok=True)
     source_manifest = json.loads((SOURCE / 'manifest.json').read_text())
     original = (SOURCE / 'rootfs/bin/CPAAProxyEx').read_bytes()
     modified, density = patch(original, density=args.density)
@@ -102,6 +104,7 @@ def main():
                    'limitations': ['No physical dongle/Corsa mirroring test yet', 'No full iOS pairing test yet',
                                    'Video passthrough only; no audio, touch, scaling, or rotation adaptation',
                                    'Head unit acceptance of phone-selected H.264 geometry is unverified'],
+                   'recovery': 'External supervisor; persistent disable latch on app failure; three original-app attempts; independent mode page; not hardware validated',
                    'verification': 'Image fits partition; re-extraction matches inputs; stock files unchanged except launcher and two configuration pages; relocated stock app has density metadata patch.'}
         (output / 'manifest.json').write_text(json.dumps(release, indent=2) + '\n')
         load_release(output)

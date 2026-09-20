@@ -19,12 +19,18 @@ Implemented behavior:
   and cross-origin browser writes are rejected. Hook execution is bounded.
 
 **An experimental device integration and flashable image are now built.** A
-launcher preserves the stock app process, loads a mirroring bridge, and starts
+launcher supervises the stock app process, loads a mirroring bridge, and starts
 this service with a real Unix-socket driver. The bridge interposes phone-side
 startup calls and feeds the exported stock video callback. See
 [flashing and limitations](../mirroring/FLASHING.md). Physical switching and Corsa
 video output remain untested. Service tests use a fake driver; separate RV32
 tests load the real integration into the stock application.
+
+On a crash or failed startup, the supervisor restarts the original app without
+the mirroring library and starts this page without an integration driver. Active
+connection is therefore reported as unconfirmed; `/api/mirror` explains recovery.
+The separate page survives app-child failures. Recovery stays latched across
+reboots; see the flashing guide for limits and the explicit reset procedure.
 
 ## Build and test
 

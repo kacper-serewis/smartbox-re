@@ -39,11 +39,33 @@ not needed. Replug after confirmed completion and reconnect to its Wi-Fi.
 
 If receiver initialization fails, the service attempts cleanup and CarPlay
 fallback. The selected mode is preserved and the page reports the fallback.
-This is startup fallback, not recovery from an application crash.
+An external supervisor now also detects app termination (including fatal signals
+and failed exec), kills its remaining process-group helpers, disables the
+mirroring library persistently, and launches the density-patched original app.
+The settings page runs as a separate supervised process and reports recovery.
+The original app gets at most three launch attempts; if it also keeps failing,
+retries stop and the page remains available if its own service can run.
+
+A missing integration socket after 15 seconds also triggers recovery. A
+persistent boot-pending flag protects the first 30 seconds: if startup is
+interrupted, the next launch skips mirroring. Normal shutdown clears this flag.
+An early power removal can therefore intentionally trigger recovery too.
+
+Recovery is latched in `/mnt/UDISK/smartbox-mode/recovery-disabled` (and possibly
+`boot-pending`). Saving a mode or reflashing the app partition does not clear it.
+Re-enabling the experiment requires explicitly removing both files while the app
+is stopped, through a device shell/recovery tool; there is currently no web reset.
+The mode page does not claim a confirmed CarPlay session during recovery.
+
+This catches app exits, not every hang, kernel failure, power loss during flashing,
+or failure of the supervisor itself. A missing startup socket is only a startup
+check, not proof that the complete app is healthy. The supervisor now retains the
+startup PID and runs CPAAProxyEx as a child; compatibility with the device's actual
+watchdog/startup scripts still needs a hardware test. It is not brick protection.
 
 ## What this build does
 
-- Keeps the stock application PID/basename and the car-facing transport running.
+- Runs the stock application under an external supervisor, retaining its basename.
 - Interposes `AirPlayReceiverServerControl(startServer)` and
   `CarPlayControlClientStart` in mirroring mode, rather than killing the app.
 - Receives ordinary AirPlay H.264 using the pinned UxPlay protocol implementation.
@@ -83,6 +105,7 @@ Setup has already been performed on this Mac. The first command can take
 python3 scripts/build_mirroring_riscv.py
 python3 scripts/build_mode_service.py --riscv
 python3 scripts/test_mirroring_device.py
+python3 scripts/test_mirroring_supervisor.py
 python3 scripts/test_mirroring_transport.py --riscv
 python3 scripts/test_mode_service.py
 python3 scripts/emulate_firmware.py --mode-tests
