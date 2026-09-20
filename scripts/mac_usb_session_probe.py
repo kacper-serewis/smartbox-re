@@ -8,6 +8,7 @@ from pathlib import Path
 import platform
 import shlex
 import subprocess
+import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,8 +18,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true', help='Publish, probe the owned dongle, and restore using native administrator dialogs')
     parser.add_argument('--stage', choices=('detect', 'syn', 'control', 'auth', 'identify', 'network'), default='control')
+    parser.add_argument('--preview', action='store_true', help='Decode the USB screen and open a loopback-only browser preview for five minutes')
     parser.add_argument('--collect-network', action='store_true', help='Read the owned dongle network/log state over its Wi-Fi during identification')
     args = parser.parse_args()
+    if args.preview and (not args.run or args.stage != 'network'):
+        parser.error('--preview requires --run --stage network')
     if args.collect_network and (not args.run or args.stage not in ('identify', 'network')):
         parser.error('--collect-network requires --run --stage identify or network')
     if args.run and args.stage == 'network':
@@ -75,6 +79,20 @@ def main():
                            stdout=log, stderr=log, check=True, timeout=10)
             key.chmod(0o600)
         credentials = [str(cert), str(key)]
+    if args.preview:
+        subprocess.run(['xcrun', 'swiftc', '-O', str(ROOT / 'experiments/mirroring/preview.swift'),
+                        '-o', str(out / 'screen-decoder')], check=True, timeout=60)
+        with (out / 'preview-server.log').open('w') as log:
+            subprocess.Popen([sys.executable, str(ROOT / 'scripts/mac_headunit_preview.py'), str(out)],
+                             stdout=log, stderr=log, start_new_session=True)
+        deadline = time.monotonic() + 5
+        while not (out / 'preview-url.txt').exists():
+            if time.monotonic() >= deadline:
+                raise RuntimeError('Preview server did not start; USB unchanged')
+            time.sleep(0.05)
+        url = (out / 'preview-url.txt').read_text().strip()
+        print('Browser preview:', url, flush=True)
+        subprocess.run(['open', url], check=True, timeout=5)
     profile = out / 'profile.json'
     invoke('make-profile', ['--make-profile', str(profile)])
     listener = role = observer = None
@@ -142,13 +160,16 @@ def main():
     if not role_result.get('mac_host_mode_restore', {}).get('success') or role_result.get('mode_after') != 2:
         raise RuntimeError('Mac host-role restoration was not verified; inspect role.json')
     print('Mac host role and original USB configuration restored. No firmware changes.')
+    (out / 'preview-state.json').write_text(json.dumps(dict(message='Test ended; normal USB configuration restored. Showing the last received frame.')))
+    if (out / 'decoder.json').exists():
+        print('Video decoder:', (out / 'decoder.json').read_text())
     milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted', 'network': 'session_start_sent'}[args.stage]
     network_ok = observer is None or any(record.get('request') == 'POST /auth-setup RTSP/1.0' and record.get('response_status') == 200 for record in observer.records)
     if observer:
         print('Observed requests:', [record.get('request', record.get('error')) for record in observer.records])
     transport_ok = result.get('result', {}).get('success')
     if args.stage == 'network' and network_ok and not result.get('error') and result.get('result', {}).get('hex') == '0xe00002eb':
-        print('AirPlay setup response sent; the final USB read was aborted. Inspect subsequent requests for peer acceptance; no video receiver yet.')
+        print('AirPlay setup response sent; the final USB read was aborted. See captured requests and decoder.json for streaming results.')
         transport_ok = True
     return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok else 3
 

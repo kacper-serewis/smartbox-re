@@ -80,5 +80,13 @@ int main() {
         assert(checksumValid(start.data(), 9) && checksumValid(start.data() + 9, start.size() - 9));
         assert(be16(start.data() + 17) == 0 && be16(start.data() + 21) == 0);
         assert(start[23] == 'f' && start[24] == 'e'); // nested list item begins at offset 23
+        Bytes timeBody; parameter(timeBody, 0, Bytes(8, 0)); parameter(timeBody, 1, {0,120}); parameter(timeBody, 2, {60});
+        Bytes timeMessage = {0x40,0x40,0,29,0x4e,0x0b};
+        timeMessage.insert(timeMessage.end(), timeBody.begin(), timeBody.end());
+        auto update = packet(5, 4, timeMessage);
+        out.clear(); assert(probe.feed(update.data(), update.size(), out)); assert(out.size() == 1);
+        timeMessage.back() = 0; timeMessage[timeMessage.size()-3] = 3; // unknown parameter tag
+        auto badUpdate = packet(6, 4, timeMessage);
+        out.clear(); assert(!probe.feed(badUpdate.data(), badUpdate.size(), out));
     }
 }

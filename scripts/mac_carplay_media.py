@@ -61,8 +61,19 @@ class BenchMedia:
         if self.key is None or not isinstance(streams, list) or len(streams) != 1:
             raise ValueError('Expected one screen stream after initial setup')
         stream = streams[0]
-        if not isinstance(stream, dict) or stream.get('type') != 110:
-            raise ValueError('This bench test supports screen streams only')
+        if not isinstance(stream, dict):
+            raise ValueError('Invalid stream description')
+        if stream.get('type') in (100, 101) and stream.get('audioFormat') in (2048, 32768):
+            if getattr(self, 'audio_streams', 0) >= 2:
+                raise ValueError('Audio stream limit reached')
+            self.audio_streams = getattr(self, 'audio_streams', 0) + 1
+            data_socket, control_socket = self.bind(socket.SOCK_DGRAM), self.bind(socket.SOCK_DGRAM)
+            self.spawn(self.discard_audio, data_socket)
+            self.spawn(self.discard_audio, control_socket)
+            return dict(streams=[dict(type=stream['type'], dataPort=data_socket.getsockname()[1],
+                                      controlPort=control_socket.getsockname()[1])])
+        if stream.get('type') != 110:
+            raise ValueError('Unsupported bench stream format')
         stream_id = stream.get('streamConnectionID')
         if type(stream_id) is not int or not -(1 << 63) <= stream_id < (1 << 64):
             raise ValueError('Invalid stream connection ID')
@@ -72,6 +83,18 @@ class BenchMedia:
         screen = self.bind(socket.SOCK_STREAM)
         self.spawn(self.video, screen, stream_id & ((1 << 64) - 1))
         return dict(streams=[dict(type=110, dataPort=screen.getsockname()[1])])
+
+    def discard_audio(self, sock):
+        packets, received = 0, 0
+        while self.active() and received < 16*1024*1024:
+            try:
+                data, peer = sock.recvfrom(65536)
+            except socket.timeout:
+                continue
+            if peer[0].split('%')[0] == self.peer and peer[3] == self.scope:
+                packets += 1
+                received += len(data)
+        self.records.append(dict(audio_discarded_packets=packets, audio_discarded_bytes=received))
 
     def video(self, sock, stream_id):
         from mac_carplay_video import capture

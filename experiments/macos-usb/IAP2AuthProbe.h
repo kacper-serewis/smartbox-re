@@ -157,6 +157,17 @@ private:
                 pos += n;
             }
             availabilityReceived = true;
+        } else if (id == 0x4e0b && identificationAccepted) {
+            // DeviceTimeUpdate: acknowledge delivery, never change the Mac clock.
+            size_t pos = 0; unsigned seen = 0;
+            while (pos < body.size()) {
+                if (body.size() - pos < 4) return fail("Truncated time update parameter");
+                unsigned n = be16(body.data() + pos), tag = be16(body.data() + pos + 2);
+                if (tag > 2 || (seen & (1u << tag)) || n != (tag == 0 ? 12u : tag == 1 ? 6u : 5u)
+                    || n > body.size() - pos) return fail("Invalid time update parameter");
+                seen |= 1u << tag; pos += n;
+            }
+            if (seen != 7) return fail("Incomplete time update");
         } else return fail("Unexpected control message in authentication probe");
         return true;
     }

@@ -1,7 +1,12 @@
 """Bounded H.264 AirPlay screen stream reader for an owned-dongle bench session."""
 import base64
+from contextlib import closing
 import hashlib
 import json
+import os
+import select
+import subprocess
+import time
 import socket
 import struct
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -50,6 +55,44 @@ def normalize_nals(data, length_size):
     return bytes(result)
 
 
+class PreviewDecoder:
+    def __init__(self, output):
+        self.process = None
+        self.log = None
+        binary = output / 'screen-decoder'
+        if binary.exists():
+            self.log = (output / 'decoder.log').open('w')
+            self.process = subprocess.Popen([str(binary), str(output)], stdin=subprocess.PIPE,
+                                            stdout=self.log, stderr=self.log)
+            os.set_blocking(self.process.stdin.fileno(), False)
+
+    def send(self, line):
+        if not self.process:
+            return
+        pending = memoryview(line.encode())
+        deadline = time.monotonic() + 1
+        descriptor = self.process.stdin.fileno()
+        while pending:
+            if time.monotonic() >= deadline or self.process.poll() is not None:
+                raise OSError('Preview decoder stopped or stalled')
+            if not select.select([], [descriptor], [], 0.1)[1]:
+                continue
+            try:
+                pending = pending[os.write(descriptor, pending):]
+            except BlockingIOError:
+                continue
+
+    def close(self):
+        if self.process:
+            self.process.stdin.close()
+            try:
+                self.process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self.process.terminate()
+                self.process.wait(timeout=2)
+            self.log.close()
+
+
 def capture(connection, media, stream_id):
     def key(prefix):
         return hashlib.sha512(prefix + str(stream_id).encode('ascii') + media.key).digest()[:16]
@@ -69,7 +112,7 @@ def capture(connection, media, stream_id):
         return bytes(data) if len(data) == size else None
 
     config, frames, total = None, 0, 0
-    with (media.output / 'screen-packets.jsonl').open('w') as decoded, (media.output / 'screen-wire.bin').open('wb') as wire:
+    with closing(PreviewDecoder(media.output)) as preview, (media.output / 'screen-packets.jsonl').open('w') as decoded, (media.output / 'screen-wire.bin').open('wb') as wire:
         while media.active() and frames < 1800 and total < 32*1024*1024:
             header = read_exact(128)
             if header is None:
@@ -92,8 +135,10 @@ def capture(connection, media, stream_id):
                     raise ValueError('Video arrived before codec configuration')
                 nal_size, sps, pps = config
                 avcc = normalize_nals(body, nal_size)
-                decoded.write(json.dumps({k:base64.b64encode(v).decode('ascii')
-                                          for k,v in dict(sps=sps, pps=pps, avcc=avcc).items()}) + '\n')
+                line = json.dumps({k:base64.b64encode(v).decode('ascii')
+                                   for k,v in dict(sps=sps, pps=pps, avcc=avcc).items()}) + '\n'
+                decoded.write(line)
+                preview.send(line)
                 decoded.flush()
                 frames += 1
             elif opcode not in (2, 4, 5):
