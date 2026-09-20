@@ -210,7 +210,8 @@ int main(int argc, const char **argv) {
                                 auto start = std::chrono::steady_clock::now();
                                 while (!interrupted && std::chrono::steady_clock::now() - start < std::chrono::seconds(15)) {
                                     io_service_t dc = IORegistryEntryFromPath(kIOMainPortDefault, controllerPath.UTF8String);
-                                    NSDictionary *s = dc ? properties(dc)[@"CurrentState"] : nil;
+                                    NSMutableDictionary *s = dc ? [properties(dc)[@"CurrentState"] mutableCopy] : nil;
+                                    [s removeObjectForKey:@"DSTS"];
                                     NSDictionary *row = @{@"mode": properties(manager)[@"IOAccessoryUSBModeType"] ?: [NSNull null],
                                                            @"controller_state": s ?: @{}};
                                     if (![row isEqual:observed.lastObject]) [observed addObject:row];

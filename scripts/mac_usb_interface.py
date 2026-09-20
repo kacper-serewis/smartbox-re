@@ -17,6 +17,8 @@ def main():
     action.add_argument('--open', action='store_true', help='Open and close only our custom interface')
     action.add_argument('--configure', action='store_true', help='Set iAP2 interface class, allocate two bulk endpoints, commit, then close')
     action.add_argument('--listen', type=int, choices=range(1, 61), metavar='SECONDS', help='Keep the interface open and attempt bounded iAP2 detection if USB configures')
+    action.add_argument('--syn-probe', type=int, choices=range(1, 61), metavar='SECONDS', help='After detection, send one synchronization offer and capture the next transfer')
+    action.add_argument('--control-probe', type=int, choices=range(1, 61), metavar='SECONDS', help='Acknowledge a validated synchronization offer and capture one control transfer')
     args = parser.parse_args()
     if platform.system() != 'Darwin':
         parser.error('This client requires macOS')
@@ -32,8 +34,8 @@ def main():
         print(build.stderr)
         return build.returncode
     (output / 'source.json').write_text(json.dumps({'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest()}, indent=2) + '\n')
-    flags = ['--listen', str(args.listen)] if args.listen else ['--configure'] if args.configure else ['--open'] if args.open else []
-    run = subprocess.run([str(binary), *flags], capture_output=True, text=True, timeout=(args.listen or 0) + 20)
+    flags = ['--control-probe', str(args.control_probe)] if args.control_probe else ['--syn-probe', str(args.syn_probe)] if args.syn_probe else ['--listen', str(args.listen)] if args.listen else ['--configure'] if args.configure else ['--open'] if args.open else []
+    run = subprocess.run([str(binary), *flags], capture_output=True, text=True, timeout=(args.listen or args.syn_probe or args.control_probe or 0) + 20)
     (output / 'result.json').write_text(run.stdout)
     (output / 'result.stderr').write_text(run.stderr)
     print('Evidence:', output)
