@@ -21,6 +21,8 @@ def main():
     args = parser.parse_args()
     if args.collect_network and (not args.run or args.stage not in ('identify', 'network')):
         parser.error('--collect-network requires --run --stage identify or network')
+    if args.run and args.stage == 'network':
+        import mac_carplay_auth  # Fail before changing USB if crypto dependency is absent.
     if platform.system() != 'Darwin':
         parser.error('Requires the prepared macOS machine and loaded protocol-3 bridge')
     out = ROOT / 'device-snapshots' / ('mac-usb-session-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ'))
@@ -95,8 +97,8 @@ def main():
                 if args.stage in ('identify', 'network'):
                     if args.stage == 'network':
                         from mac_carplay_observer import USBObserver
-                        observer = USBObserver(out)
-                        print(f'USB-only observer: [{observer.host}%{observer.name}]:{observer.port}', flush=True)
+                        observer = USBObserver(out, (cert.read_bytes(), key.read_bytes()))
+                        print(f'USB-only bench receiver: [{observer.host}%{observer.name}]:{observer.port}', flush=True)
                     else:
                         time.sleep(3)
                     network = subprocess.run(['/sbin/ifconfig', '-a'], capture_output=True, text=True, timeout=5)
@@ -141,12 +143,12 @@ def main():
         raise RuntimeError('Mac host-role restoration was not verified; inspect role.json')
     print('Mac host role and original USB configuration restored. No firmware changes.')
     milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted', 'network': 'session_start_sent'}[args.stage]
-    network_ok = observer is None or any(record.get('request') and record.get('response_status') == 501 for record in observer.records)
+    network_ok = observer is None or any(record.get('request') == 'POST /auth-setup RTSP/1.0' and record.get('response_status') == 200 for record in observer.records)
     if observer:
         print('Observed requests:', [record.get('request', record.get('error')) for record in observer.records])
     transport_ok = result.get('result', {}).get('success')
     if args.stage == 'network' and network_ok and not result.get('error') and result.get('result', {}).get('hex') == '0xe00002eb':
-        print('Request observation completed; the final USB read was aborted. The observer returned 501, not a video session.')
+        print('AirPlay setup response sent; the final USB read was aborted. Inspect subsequent requests for peer acceptance; no video receiver yet.')
         transport_ok = True
     return 0 if transport_ok and result.get(milestone) and role.returncode == 0 and network_ok else 3
 

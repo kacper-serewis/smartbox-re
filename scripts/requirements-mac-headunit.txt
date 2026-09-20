@@ -1,0 +1,2 @@
+# Temporary USB head-unit bench receiver. Install into the project virtualenv.
+cryptography==46.0.7
