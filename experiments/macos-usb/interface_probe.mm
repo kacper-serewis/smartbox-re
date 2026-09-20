@@ -37,7 +37,8 @@ static bool disconnected(io_registry_entry_t controller) {
 int main(int argc, const char **argv) {
     @autoreleasepool {
         unsigned listenSeconds = 0;
-        bool authProbe = argc == 5 && !strcmp(argv[1], "--auth-probe");
+        bool identifyProbe = argc == 5 && !strcmp(argv[1], "--identify-probe");
+        bool authProbe = identifyProbe || (argc == 5 && !strcmp(argv[1], "--auth-probe"));
         bool controlProbe = authProbe || (argc == 3 && !strcmp(argv[1], "--control-probe"));
         bool synProbe = controlProbe || (argc == 3 && !strcmp(argv[1], "--syn-probe"));
         if ((argc == 3 || authProbe) && (!strcmp(argv[1], "--listen") || synProbe)) {
@@ -159,7 +160,7 @@ int main(int argc, const char **argv) {
                                 NSMutableArray *states = [NSMutableArray array], *received = [NSMutableArray array], *detectWrites = [NSMutableArray array];
                                 NSDictionary *previous = nil;
                                 unsigned totalReceived = 0, writes = 0;
-                                bool configured = false, synSent = false, ackSent = false;
+                                bool configured = false, synSent = false, ackSent = false, detectSent = false;
                                 std::unique_ptr<iap2probe::AuthProbe> authentication;
                                 const uint8_t detect[] = {0xff, 0x55, 0x02, 0x00, 0xee, 0x10};
                                 auto start = std::chrono::steady_clock::now();
@@ -174,6 +175,12 @@ int main(int argc, const char **argv) {
                                         if (states.count < 128) [states addObject:state];
                                         previous = state;
                                     }
+                                    if (identifyProbe && authentication && authentication->done()) {
+                                        // Keep both interfaces present for the network snapshot until
+                                        // the independent role helper restores the Mac's host role.
+                                        if ([state[@"OnBus"] isEqual:@NO]) break;
+                                        usleep(100000); continue;
+                                    }
                                     if ([state[@"OnBus"] isEqual:@YES] && [state[@"SelectedConfiguration"] unsignedIntValue] > 0) {
                                         configured = true;
                                         report[@"data_transfer_attempted"] = @YES;
@@ -183,11 +190,18 @@ int main(int argc, const char **argv) {
                                             uint64_t bytes = 0; uint32_t count = 1;
                                             IOReturn r = IOConnectCallScalarMethod(connection, 14, args, 4, &bytes, &count);
                                             [detectWrites addObject:@{@"result": result(r), @"bytes": @(bytes)}];
+                                            if (!r && count == 1 && bytes == sizeof(detect)) detectSent = true;
                                             writes++;
                                             nextDetect = std::chrono::steady_clock::now() + std::chrono::milliseconds(200);
                                             if (r && r != kIOReturnTimeout && (uint32_t)r != 0xe0000001) {
                                                 operation = r; break;
                                             }
+                                        }
+                                        // A timed-out DETECT was not delivered. Reading before a
+                                        // successful send can block until the role watchdog disconnects.
+                                        if (!detectSent) {
+                                            if (writes >= 3) { operation = kIOReturnTimeout; break; }
+                                            usleep(100000); continue;
                                         }
                                         uint64_t args[] = {[report[@"pipes"][0][@"id"] unsignedLongLongValue], mapping[2], size, 100};
                                         uint64_t bytes = 0; uint32_t count = 1;
@@ -230,6 +244,7 @@ int main(int argc, const char **argv) {
                                                     report[@"control_messages"] = messages;
                                                     report[@"authentication_succeeded"] = @(authentication->authenticated);
                                                     report[@"identification_requested"] = @(authentication->identificationRequested);
+                                                    report[@"identification_accepted"] = @(authentication->identificationAccepted);
                                                     if (!valid) {
                                                         report[@"error"] = @(authentication->error.c_str());
                                                         operation = kIOReturnBadArgument; break;
@@ -243,7 +258,7 @@ int main(int argc, const char **argv) {
                                                         if (!operation && (sendCount != 1 || sent != reply.size())) operation = kIOReturnUnderrun;
                                                         if (operation) break;
                                                     }
-                                                    if (operation || authentication->done()) break;
+                                                    if (operation || (authentication->done() && !identifyProbe)) break;
                                                 } else if (synSent) {
                                                     report[@"syn_response_captured"] = @YES;
                                                     bool valid = iap2probe::controlSynAck(buffer, bytes);
@@ -269,7 +284,7 @@ int main(int argc, const char **argv) {
                                                                 }
                                                                 if (error) CFRelease(error);
                                                                 return result;
-                                                            }));
+                                                            }, identifyProbe));
                                                     }
                                                     uint8_t ack[9]; iap2probe::makeAck(buffer[5], ack);
                                                     memcpy(buffer, ack, sizeof(ack));

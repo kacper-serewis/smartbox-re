@@ -53,4 +53,25 @@ int main() {
         auto bad = packet(0, 1, message(0xaa02, Bytes(32, 0x12)));
         assert(!probe.feed(bad.data(), bad.size(), out) && calls == 0);
     }
+    {
+        AuthProbe probe(0xfe, Bytes(800, 0x42), [](const Bytes &) { return Bytes(256, 0x77); }, true);
+        std::vector<Bytes> out;
+        for (const auto &f : {request, packet(0, 1, message(0xaa02, Bytes(20, 0x12))),
+                             packet(1, 2, emptyMessage(0xaa05)), packet(2, 2, emptyMessage(0x1d00))}) {
+            out.clear(); assert(probe.feed(f.data(), f.size(), out));
+        }
+        assert(!probe.done() && out.size() == 2);
+        const auto &f = out.back(); assert(f[5] == 3 && be16(f.data() + 13) == 0x1d01);
+        auto id = identification(); assert(be16(id.data() + 2) == id.size());
+        size_t pos = 6; bool usb = false;
+        while (pos < id.size()) {
+            unsigned n = be16(id.data() + pos), tag = be16(id.data() + pos + 2);
+            assert(n >= 4 && pos + n <= id.size());
+            if (tag == 16) usb = true;
+            pos += n;
+        }
+        assert(pos == id.size() && usb);
+        auto accepted = packet(3, 3, emptyMessage(0x1d02));
+        out.clear(); assert(probe.feed(accepted.data(), accepted.size(), out)); assert(probe.done());
+    }
 }

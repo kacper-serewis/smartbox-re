@@ -25,19 +25,41 @@ inline Bytes message(unsigned id, const Bytes &value) {
     append16(result, 4 + value.size()); append16(result, 0);
     result.insert(result.end(), value.begin(), value.end()); return result;
 }
+inline void parameter(Bytes &out, unsigned id, const Bytes &value) {
+    append16(out, 4 + value.size()); append16(out, id); out.insert(out.end(), value.begin(), value.end());
+}
+inline Bytes text(const char *s) {
+    Bytes v; do { v.push_back(uint8_t(*s)); } while (*s++); return v;
+}
+inline Bytes identification() {
+    Bytes p;
+    parameter(p, 0, text("SmartBox Mac Bench")); parameter(p, 1, text("MacReceiverTest"));
+    parameter(p, 2, text("Local Development")); parameter(p, 3, text("SMARTBOX-MAC-001"));
+    parameter(p, 4, text("0.1")); parameter(p, 5, text("1"));
+    parameter(p, 6, {0xae,0x00,0xae,0x02,0xae,0x03,0x43,0x01});
+    parameter(p, 7, {0xae,0x01,0x43,0x00});
+    parameter(p, 8, {2}); parameter(p, 9, {0,0});
+    parameter(p, 12, text("en")); parameter(p, 13, text("en"));
+    Bytes usb;
+    parameter(usb, 0, {0x03,0xe9}); parameter(usb, 1, text("USB_USE"));
+    parameter(usb, 2, {}); parameter(usb, 3, {1}); parameter(usb, 4, {});
+    parameter(p, 16, usb); // Logical USB-host CarPlay component; NCM control interface 1.
+    Bytes result{0x40,0x40}; append16(result, 6 + p.size()); append16(result, 0x1d01);
+    result.insert(result.end(), p.begin(), p.end()); return result;
+}
 
 // Bounded bench exchange, ending at StartIdentification. No general-purpose
 // authentication credentials, device changes, or video-session support.
 class AuthProbe {
 public:
     using Sign = std::function<Bytes(const Bytes &)>;
-    bool authenticated = false, identificationRequested = false;
+    bool authenticated = false, identificationRequested = false, identificationAccepted = false;
     unsigned certificateReplies = 0, challengeReplies = 0;
     std::vector<unsigned> messages;
     std::string error;
-    AuthProbe(uint8_t peerSyn, Bytes certificate, Sign sign)
-        : peer(peerSyn), cert(std::move(certificate)), signer(std::move(sign)) {}
-    bool done() const { return authenticated && identificationRequested; }
+    AuthProbe(uint8_t peerSyn, Bytes certificate, Sign sign, bool identify = false)
+        : peer(peerSyn), cert(std::move(certificate)), signer(std::move(sign)), identify(identify) {}
+    bool done() const { return authenticated && (identify ? identificationAccepted : identificationRequested); }
 
     bool feed(const uint8_t *data, size_t size, std::vector<Bytes> &out) {
         if (!error.empty()) return false;
@@ -86,6 +108,7 @@ private:
     unsigned frames = 0;
     Bytes cert, incoming, control, lastFrame;
     Sign signer;
+    bool identify;
     std::vector<Bytes> lastReplies;
     bool fail(const char *why) { error = why; return false; }
     bool handle(unsigned id, const Bytes &body) {
@@ -107,8 +130,14 @@ private:
         } else if (id == 0xaa04) {
             return fail("Dongle rejected the test authentication");
         } else if (id == 0x1d00) {
-            if (!body.empty() || !authenticated) return fail("Out-of-order identification request");
+            if (!body.empty() || !authenticated || identificationRequested) return fail("Out-of-order identification request");
             identificationRequested = true;
+            if (identify) lastReplies.push_back(packet(nextSeq++, peer, identification()));
+        } else if (id == 0x1d02 && identify) {
+            if (!body.empty() || !identificationRequested) return fail("Out-of-order identification acceptance");
+            identificationAccepted = true;
+        } else if (id == 0x1d03) {
+            return fail("Dongle rejected the bench identification");
         } else return fail("Unexpected control message in authentication probe");
         return true;
     }
