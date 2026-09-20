@@ -157,3 +157,22 @@ and [kernel security](https://support.apple.com/en-ca/guide/security/sec8e454101
 A return to normal security must include removing this test extension from the
 Auxiliary Kernel Collection and rebooting; deleting the source or unplugging the
 dongle does not unload a Mac kernel extension.
+
+## First loaded-driver result and update
+
+Version 0.1.0 loaded after approval and reboot, but refused the root request as
+`not ready` before scheduling a configuration call. The exported controller
+status was disconnected/off-bus. This does not establish configuration access.
+Evidence is in `device-snapshots/mac-usb-gadget-20260920T160628.454154Z`.
+
+Version 0.1.1 adds support for a lazy OSSerializer `CurrentState` property and
+reports `ProbeStateObjectType` / `ProbeReadiness`. The type hypothesis still
+needs confirmation on-device; the disconnected/off-bus requirement is preserved.
+Only the controller-owned state is parsed, with a 16 KiB parse-length limit.
+The current artifact was built with SDK 27.0, with guard tests passing.
+
+The installer now permits `--upgrade` only from the exact pinned 0.1.0 bundle,
+preserving it outside `/Library/Extensions` as
+`/Library/Application Support/SmartBoxUSBProbe/0.1.0.kext`. The 0.1.1 bundle is
+staged, but macOS again requires System Settings approval/reboot before it takes
+effect. The loaded 0.1.0 instance has not run the private configuration call.

@@ -83,6 +83,27 @@ probe request was sent. Privacy & Security was opened for the user to complete
 the OS-required approval/restart. Evidence:
 `device-snapshots/mac-usb-gadget-20260920T154139.171309Z`.
 
+After the following approval/reboot, `kmutil showloaded` and IORegistry both
+confirmed 0.1.0 loaded and attached to the correct controller. The authorized
+root client reached the driver but received `0xe00002d8` (not ready) from its
+request method. `ProbeCompleted` remained false, and the configuration remained
+unchanged: this was a readiness refusal, not a successful kernel configuration
+call. The exported controller status still reported disconnected/off-bus.
+
+One suspected cause is the driver's assumption that `CurrentState` is directly
+an OSDictionary; a lazy OSSerializer also appears as a dictionary through the
+user-space registry APIs. Version 0.1.1 supports materializing that specific
+controller property (bounded XML parse), keeps the disconnected/off-bus checks,
+and publishes object type and exact readiness refusal reason. This cause is
+not yet confirmed by live kernel diagnostics. No guard was removed.
+
+Version 0.1.1 built with the now-selected SDK 27.0; policy tests passed. The
+checksum-pinned upgrade was staged with the original bundle preserved at
+`/Library/Application Support/SmartBoxUSBProbe/0.1.0.kext`. Its load request
+returned exit 27 requiring System Settings approval again. The running kernel
+still has 0.1.0, and 0.1.1 is not yet tested live. Evidence:
+`device-snapshots/mac-usb-gadget-20260920T160628.454154Z`.
+
 Evidence: `device-snapshots/mac-usb-gadget-20260920T130157.961930Z`.
 
 ## Proposed Mac-only test path — not implemented

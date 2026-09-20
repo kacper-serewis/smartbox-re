@@ -64,6 +64,10 @@ static IOReturn kernelProbe(io_service_t controller, NSMutableDictionary *report
     NSDictionary *command = @{@"CheckConfigurationAccess": @YES};
     kr = IORegistryEntrySetCFProperties(selected, (__bridge CFDictionaryRef)command);
     report[@"kernel_request"] = result(kr);
+    NSDictionary *diagnostics = properties(selected);
+    report[@"kernel_diagnostics"] = @{@"version": diagnostics[@"ProbeVersion"] ?: [NSNull null],
+        @"readiness": diagnostics[@"ProbeReadiness"] ?: [NSNull null],
+        @"state_object_type": diagnostics[@"ProbeStateObjectType"] ?: [NSNull null]};
     if (kr == kIOReturnSuccess) {
         kr = kIOReturnTimeout;
         for (int i = 0; i < 50; i++) {

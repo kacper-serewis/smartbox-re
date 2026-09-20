@@ -51,7 +51,7 @@ def main():
         print('Controllers matching the dongle port:', report['matching_controllers'])
         print(json.dumps({k: v for k, v in report.items() if k in (
             'refused', 'set_existing_configuration', 'description_unchanged', 'state_after',
-            'kernel_probe_error', 'kernel_request', 'kernel_configuration_result')}, indent=2))
+            'kernel_probe_error', 'kernel_request', 'kernel_configuration_result', 'kernel_diagnostics')}, indent=2))
     if run.stderr:
         print(run.stderr)
     return run.returncode

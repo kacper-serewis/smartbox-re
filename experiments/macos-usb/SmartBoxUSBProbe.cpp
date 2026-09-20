@@ -6,6 +6,8 @@
 #include <IOKit/IOWorkLoop.h>
 #include <IOKit/IOTimerEventSource.h>
 #include <libkern/c++/OSContainers.h>
+#include <libkern/c++/OSSerialize.h>
+#include <libkern/c++/OSUnserialize.h>
 #include <kern/task.h>
 #include "ProbePolicy.h"
 
@@ -18,7 +20,8 @@ class SmartBoxUSBProbe : public IOService {
     bool timerAdded = false;
     ProbePolicy policy;
     bool targetMatches(IOService *p) const;
-    bool ready() const;
+    bool ready();
+    OSDictionary *copyState();
     void cleanup();
     IOReturn performProbe();
     static void execute(OSObject *owner, IOTimerEventSource *sender);
@@ -40,13 +43,36 @@ bool SmartBoxUSBProbe::targetMatches(IOService *p) const {
     return parent && !strcmp(parent->getName(), "usb-drd1");
 }
 
-bool SmartBoxUSBProbe::ready() const {
-    if (!targetMatches(controller) || controller->isInactive()) return false;
+OSDictionary *SmartBoxUSBProbe::copyState() {
     OSObject *value = controller->copyProperty("CurrentState");
+    setProperty("ProbeStateObjectType", value ? value->getMetaClass()->getClassName() : "missing");
     OSDictionary *state = OSDynamicCast(OSDictionary, value);
+    if (state) return state; // copyProperty already retained it.
+    // Registry properties may be lazy serializers. Materialize only this
+    // trusted controller property, never caller-supplied XML, and cap parsing.
+    if (value && !strcmp(value->getMetaClass()->getClassName(), "OSSerializer")) {
+        OSSerialize *xml = OSSerialize::withCapacity(2048);
+        if (xml && value->serialize(xml) && xml->getLength() > 0 && xml->getLength() <= 16384) {
+            OSObject *decoded = OSUnserializeXML(xml->text());
+            state = OSDynamicCast(OSDictionary, decoded);
+            if (decoded && !state) decoded->release();
+        }
+        if (xml) xml->release();
+    }
+    if (value) value->release();
+    return state;
+}
+
+bool SmartBoxUSBProbe::ready() {
+    if (!targetMatches(controller)) { setProperty("ProbeReadiness", "wrong-controller"); return false; }
+    if (controller->isInactive()) { setProperty("ProbeReadiness", "inactive-controller"); return false; }
+    OSDictionary *state = copyState();
     OSString *name = state ? OSDynamicCast(OSString, state->getObject("DeviceState")) : nullptr;
     bool ok = name && name->isEqualTo("Disconnected") && state->getObject("OnBus") == kOSBooleanFalse;
-    if (value) value->release();
+    setProperty("ProbeReadiness", !state ? "state-not-dictionary" : !name ? "missing-device-state" :
+                !name->isEqualTo("Disconnected") ? "device-connected" :
+                state->getObject("OnBus") != kOSBooleanFalse ? "on-bus-or-unknown" : "ready");
+    if (state) state->release();
     return ok;
 }
 
@@ -67,7 +93,7 @@ bool SmartBoxUSBProbe::start(IOService *provider) {
         cleanup(); IOService::stop(provider); return false;
     }
     timerAdded = true;
-    if (!setProperty("ProbeVersion", "1") || !setProperty("ProbeCompleted", kOSBooleanFalse)) {
+    if (!setProperty("ProbeVersion", "2") || !setProperty("ProbeCompleted", kOSBooleanFalse)) {
         cleanup(); IOService::stop(provider); return false;
     }
     registerService();
