@@ -24,6 +24,9 @@
 #ifndef BENCH_SOCKET
 #define BENCH_SOCKET "/tmp/smartbox-bench/control.sock"
 #endif
+#ifndef BENCH_SOCKET_LIBRARY
+#define BENCH_SOCKET_LIBRARY "/tmp/smartbox-bench/libsocket-reuse.so"
+#endif
 static volatile sig_atomic_t stopping;
 static void stop(int sig) { (void)sig; stopping=1; }
 static double seconds(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec+t.tv_nsec/1e9; }
@@ -73,9 +76,19 @@ int main(int argc,char **argv) {
     snprintf(path,sizeof(path),"/proc/%ld/cwd",(long)original);n=readlink(path,cwd,sizeof(cwd)-1);if(n<0)return 3;cwd[n]=0;
     char *argdata=procfile(original,"cmdline"),*envdata=procfile(original,"environ");if(!argdata||!envdata)return 3;
     char **args=split(argdata),**env=split(envdata);if(!args||!env||!args[0]||chdir(cwd))return 3;
-    unsigned count=0;while(env[count]){if(!strncmp(env[count],"LD_PRELOAD=",11))return 3;count++;}
+    unsigned count=0;while(env[count]){
+        if(!strncmp(env[count],"LD_PRELOAD=",11)) {
+            if(!*BENCH_SOCKET_LIBRARY||strcmp(env[count]+11,BENCH_SOCKET_LIBRARY))return 3;
+            for(unsigned i=count;env[i];i++)env[i]=env[i+1];
+        } else count++;
+    }
+    if(*BENCH_SOCKET_LIBRARY&&access(BENCH_SOCKET_LIBRARY,R_OK))return 3;
     char **experimental=calloc(count+2,sizeof(char *));if(!experimental)return 3;
-    memcpy(experimental,env,count*sizeof(char *));experimental[count]="LD_PRELOAD=" BENCH_LIBRARY;
+    memcpy(experimental,env,count*sizeof(char *));
+    experimental[count]=*BENCH_SOCKET_LIBRARY?"LD_PRELOAD=" BENCH_SOCKET_LIBRARY ":" BENCH_LIBRARY:"LD_PRELOAD=" BENCH_LIBRARY;
+    char **restored=calloc(count+2,sizeof(char *));if(!restored)return 3;
+    memcpy(restored,env,count*sizeof(char *));
+    if(*BENCH_SOCKET_LIBRARY)restored[count]="LD_PRELOAD=" BENCH_SOCKET_LIBRARY;
     signal(SIGTERM,stop);signal(SIGINT,stop);signal(SIGHUP,stop);
     if(started(original)!=start||kill(original,SIGTERM))return 3;
     double deadline=seconds()+2;while(started(original)==start&&seconds()<deadline)usleep(50000);
@@ -96,6 +109,6 @@ int main(int argc,char **argv) {
     unlink(BENCH_SOCKET);
     fprintf(stderr,"Restoring stock application; experimental wait status %d\n",status);fflush(stderr);
     signal(SIGTERM,SIG_DFL);signal(SIGINT,SIG_DFL);signal(SIGHUP,SIG_DFL);
-    execve(BENCH_APP,args,env);
+    execve(BENCH_APP,args,restored);
     perror("restore stock app");return 5;
 }

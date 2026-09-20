@@ -10,27 +10,32 @@ import json
 ROOT=Path(__file__).resolve().parents[1]
 def guest():
     root=Path('/tmp/smartbox-bench-test');root.mkdir(exist_ok=True)
-    app=root/'fake-app';lib=root/'test.so';bench=root/'bench'
+    app=root/'fake-app';lib=root/'test.so';restore=root/'restore.so';bench=root/'bench'
     (root/'fake.c').write_text(r'''
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-int main(void){FILE *f=fopen("/tmp/smartbox-bench-test/events","a");int test=getenv("LD_PRELOAD")!=NULL;
+int main(void){FILE *f=fopen("/tmp/smartbox-bench-test/events","a");char *preload=getenv("LD_PRELOAD");int test=preload&&strstr(preload,"test.so")!=NULL;
 fprintf(f,"%s %ld\n",test?"experimental":"original",(long)getpid());fclose(f);
 if(test&&getenv("TEST_CRASH"))abort();for(;;)sleep(1);}
 ''')
     (root/'lib.c').write_text('int bench_test_symbol;')
     subprocess.run(['gcc',str(root/'fake.c'),'-o',str(app)],check=True)
     subprocess.run(['gcc','-shared','-fPIC',str(root/'lib.c'),'-o',str(lib)],check=True)
-    subprocess.run(['gcc','-Wall','-Wextra','-Werror',f'-DBENCH_APP="{app}"',f'-DBENCH_LIBRARY="{lib}"',
+    subprocess.run(['gcc','-shared','-fPIC',str(root/'lib.c'),'-o',str(restore)],check=True)
+    subprocess.run(['gcc','-Wall','-Wextra','-Werror',f'-DBENCH_SOCKET_LIBRARY="{restore}"',f'-DBENCH_APP="{app}"',f'-DBENCH_LIBRARY="{lib}"',
                     '/work/experiments/mirroring/bench_launch.c','-o',str(bench)],check=True)
     results=[]
-    for mode in ('crash','signal','deadline','wrong_identity'):
+    for mode in ('crash','signal','deadline','unreaped_original','compatibility_restart','wrong_identity'):
         events=root/'events';events.unlink(missing_ok=True)
         env=dict(os.environ)
         if mode=='crash':env['TEST_CRASH']='1'
+        if mode=='compatibility_restart':env['LD_PRELOAD']=str(restore)
         original=subprocess.Popen([str(app)],env=env)
-        thread=threading.Thread(target=original.wait);thread.start()
+        thread=None
+        if mode!='unreaped_original':
+            thread=threading.Thread(target=original.wait);thread.start()
         process=None
         try:
             start=Path(f'/proc/{original.pid}/stat').read_text().rsplit(')',1)[1].split()[19]
@@ -46,7 +51,7 @@ if(test&&getenv("TEST_CRASH"))abort();for(;;)sleep(1);}
                         break
                 else:
                     experimental=[x for x in lines if x.startswith('experimental')]
-                    if mode=='signal' and experimental and not signaled:
+                    if mode in ('signal','unreaped_original','compatibility_restart') and experimental and not signaled:
                         process.terminate();signaled=True
                     if any(x==f'original {process.pid}' for x in lines):
                         assert experimental and original.poll() is not None
@@ -57,7 +62,7 @@ if(test&&getenv("TEST_CRASH"))abort();for(;;)sleep(1);}
         finally:
             for proc in (process,original):
                 if proc and proc.poll() is None:proc.kill();proc.wait(timeout=3)
-            thread.join(timeout=3)
+            if thread:thread.join(timeout=3)
     print(json.dumps(results,indent=2))
 
 if __name__=='__main__':

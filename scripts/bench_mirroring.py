@@ -59,7 +59,10 @@ def prepare(recovery, refresh=False):
         previous=json.loads((recovery.output/'bench-session.json').read_text())
         if previous['remote']!=REMOTE:raise ValueError('Unexpected previous bench path')
         maps=recovery.diagnostic(f'cat /proc/{app["pid"]}/maps')
-        if REMOTE in maps:raise ValueError('Experimental library is still loaded')
+        if REMOTE+'/libsmartbox-mirror.so' in maps:raise ValueError('Experimental library is still loaded')
+        if REMOTE+'/libsocket-reuse.so' in maps:
+            current=recovery.diagnostic(f'md5sum {REMOTE}/libsocket-reuse.so').split()[0]
+            if current!=hashlib.md5((BUILD/'libsocket-reuse.so').read_bytes()).hexdigest():raise ValueError('Socket compatibility library is active; replug before changing it')
         recovery.diagnostic(f'touch {REMOTE}/refresh-pending; rm -f {REMOTE}/started {REMOTE}/control.sock /tmp/boxupdate/smartbox-bench-video.h264 /tmp/boxupdate/smartbox-bench-events.jsonl /tmp/boxupdate/smartbox-bench.json')
     data=FETCH.read_bytes()
     if hashlib.sha256(data).hexdigest()!=FETCH_SHA:raise ValueError('RAM transfer helper hash mismatch')
@@ -70,7 +73,7 @@ def prepare(recovery, refresh=False):
     result=recovery.diagnostic(f'chmod 700 {helper}; md5sum {helper}; mkdir -p {REMOTE}/state')
     if result.split()[0]!=hashlib.md5(data).hexdigest():raise ValueError('Transfer helper did not verify')
     files={}
-    for source,target in [('libsmartbox-bench.so','libsmartbox-mirror.so'),('smartbox-bench','launcher')]:
+    for source,target in [('libsmartbox-bench.so','libsmartbox-mirror.so'),('smartbox-bench','launcher'),('libsocket-reuse.so','libsocket-reuse.so')]:
         temporary=REMOTE+'/'+target+'.incoming-'+recovery.token
         transfer(recovery,helper,BUILD/source,temporary)
         recovery.diagnostic(f'mv {temporary} {REMOTE}/{target}')
@@ -102,14 +105,14 @@ def main():
     r.check_identity()
     if args.action=='start':
         app=probe(r)
-        checks=r.diagnostic(f'md5sum {REMOTE}/launcher {REMOTE}/libsmartbox-mirror.so; if test -e {REMOTE}/started; then echo STARTED; fi; if test -e {REMOTE}/refresh-pending; then echo PENDING; fi')
+        checks=r.diagnostic(f'md5sum {REMOTE}/launcher {REMOTE}/libsmartbox-mirror.so {REMOTE}/libsocket-reuse.so; if test -e {REMOTE}/started; then echo STARTED; fi; if test -e {REMOTE}/refresh-pending; then echo PENDING; fi')
         if 'PENDING' in checks:raise ValueError('Previous refresh incomplete')
-        for source,target in [('libsmartbox-bench.so','libsmartbox-mirror.so'),('smartbox-bench','launcher')]:
+        for source,target in [('libsmartbox-bench.so','libsmartbox-mirror.so'),('smartbox-bench','launcher'),('libsocket-reuse.so','libsocket-reuse.so')]:
             if hashlib.sha256((BUILD/source).read_bytes()).hexdigest()!=session['files'][target]['sha256']:raise ValueError('Local bench build differs; refresh required')
         if 'STARTED' in checks:raise ValueError('This bench session has already run')
         for target,item in session['files'].items():
             if not re.search('^'+item['md5']+r'\s+'+re.escape(REMOTE+'/'+target)+'$',checks,re.M):raise ValueError('Bench payload changed')
-        command=(f'touch {REMOTE}/started; {REMOTE}/launcher {app["pid"]} {app["start_time"]} {args.seconds}'
+        command=(f'if test -e /tmp/boxupdate/smartbox-bench.log; then mv /tmp/boxupdate/smartbox-bench.log /tmp/boxupdate/smartbox-bench-{r.token}.log; fi; touch {REMOTE}/started; {REMOTE}/launcher {app["pid"]} {app["start_time"]} {args.seconds}'
                  f' </dev/null >/tmp/boxupdate/smartbox-bench.log 2>&1 & echo $! > {REMOTE}/launcher.pid')
         r.diagnostic(command)
     elif args.action=='stop':

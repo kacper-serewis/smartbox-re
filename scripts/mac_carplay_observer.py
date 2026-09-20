@@ -26,7 +26,9 @@ def usb_endpoint():
     if len(set(names)) != 1:
         raise RuntimeError('Expected one Ethernet interface under the prepared USB device controller')
     name = names[0]
-    for _ in range(15):
+    # A fresh app start may need several seconds to enumerate NCM.
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
         config = subprocess.check_output(['/sbin/ifconfig', name], text=True, timeout=5)
         match = re.search(r'inet6 (fe80:[0-9a-f:]+)%' + re.escape(name) + r'\s', config, re.I)
         if match:

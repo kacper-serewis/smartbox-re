@@ -8,3 +8,5 @@ FLAGS='-Os -fPIC -std=gnu11 -DPLIST_210 -DPLIST_230 -DNOHOLD -D_LINUX -D_REENTRA
 "$TC-strip" /build/libsmartbox-bench.so
 "$TC-gcc" -Os -Wall -Wextra -Werror /work/experiments/mirroring/bench_launch.c -o /build/smartbox-bench
 "$TC-strip" /build/smartbox-bench
+"$TC-gcc" -Os -Wall -Wextra -Werror -fPIC -shared /work/experiments/mirroring/bench_socket.c -o /build/libsocket-reuse.so -ldl
+"$TC-strip" /build/libsocket-reuse.so
