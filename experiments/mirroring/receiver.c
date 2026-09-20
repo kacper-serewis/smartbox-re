@@ -143,9 +143,15 @@ static raop_callbacks_t capture_callbacks(capture_t *c) {
 
 int main(int argc, char **argv) {
     /* The Python launcher validates these arguments and creates a private cwd. */
-    if (argc != 7) {
-        fprintf(stderr, "Usage: mirror-capture NAME MAC WALL_SECONDS VIDEO_SECONDS MAX_BYTES ADVERTISE\n");
+    if (argc != 7 && argc != 10) {
+        fprintf(stderr, "Usage: mirror-capture NAME MAC WALL_SECONDS VIDEO_SECONDS MAX_BYTES ADVERTISE [WIDTH HEIGHT MAX_FPS]\n");
         return 2;
+    }
+    int requested_width = 800, requested_height = 480, requested_fps = 30;
+    if (argc == 10) {
+        requested_width = atoi(argv[7]); requested_height = atoi(argv[8]); requested_fps = atoi(argv[9]);
+        if (requested_width < 160 || requested_width > 1920 || requested_height < 160 ||
+            requested_height > 1080 || requested_fps < 1 || requested_fps > 60) return 2;
     }
     setvbuf(stdout, NULL, _IOLBF, 0);
     unsigned int octets[6];
@@ -183,8 +189,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     raop_set_dnssd(server, dns);
-    raop_set_plist(server, "width", 800); raop_set_plist(server, "height", 480);
-    raop_set_plist(server, "refreshRate", 60); raop_set_plist(server, "maxFPS", 30);
+    raop_set_plist(server, "width", requested_width); raop_set_plist(server, "height", requested_height);
+    raop_set_plist(server, "refreshRate", 60); raop_set_plist(server, "maxFPS", requested_fps);
     raop_set_plist(server, "pin", 0); raop_set_plist(server, "hls", 0);
     unsigned short tcp[2] = {0}, udp[3] = {0}, port = 0;
     raop_set_tcp_ports(server, tcp); raop_set_udp_ports(server, udp);
@@ -199,6 +205,7 @@ int main(int argc, char **argv) {
         airplay_advertised = true;
     }
     printf("READY port=%u name=%s\n", port, argv[1]);
+    printf("Requested display %dx%d, maximum %d fps (sender may choose different dimensions).\n", requested_width, requested_height, requested_fps);
     printf("Choose this receiver in iPhone Control Center > Screen Mirroring.\n");
     double started = monotime();
     for (;;) {
@@ -224,8 +231,9 @@ cleanup:
     FILE *summary = fopen("receiver-summary.json", "wx");
     if (summary) {
         if (fprintf(summary, "{\"reason\":\"%s\",\"bytes\":%" PRIu64 ",\"packets\":%" PRIu64
-                    ",\"failed\":%s,\"requested\":[800,480],\"max_fps\":30}\n",
-                    c.reason ? c.reason : "startup_error", c.bytes, c.packets, status ? "true" : "false") < 0) status = 1;
+                    ",\"failed\":%s,\"requested\":[%d,%d],\"max_fps\":%d}\n",
+                    c.reason ? c.reason : "startup_error", c.bytes, c.packets, status ? "true" : "false",
+                    requested_width, requested_height, requested_fps) < 0) status = 1;
         if (fclose(summary)) status = 1;
     } else { status = 1; }
     printf("Stopped: %s; %" PRIu64 " bytes in %" PRIu64 " video packets.\n",

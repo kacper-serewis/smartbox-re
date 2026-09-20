@@ -40,4 +40,5 @@ done
 "$STRIP" smartbox-launch
 "$CC" $CFLAGS /work/experiments/mirroring/test_timeouts.c -o test-timeouts
 "$CC" $CFLAGS $FLAGS $INC -rdynamic /work/experiments/mirroring/test_device_bridge.c -o test-device-bridge libmirror.a /build/prefix/lib/libplist-2.0.a -L/work/firmwares/hw501/131/rootfs/lib -Wl,--gc-sections -lcrypto -ldns_sd -lpthread -lm -ldl
+"$CC" $CFLAGS $FLAGS $INC /work/experiments/mirroring/replay_bridge.c -o replay-bridge libmirror.a /build/prefix/lib/libplist-2.0.a -L/work/firmwares/hw501/131/rootfs/lib -Wl,--gc-sections -lcrypto -ldns_sd -lpthread -lm -ldl
 riscv32-buildroot-linux-gnu-readelf --version-info mirror-capture

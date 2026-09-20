@@ -80,7 +80,7 @@ def incremental(opener, url, offset, limit):
         raise
 
 
-def deploy(recovery, output, seconds):
+def deploy(recovery, output, seconds, width=800, height=480, fps=30):
     helper = FETCH.read_bytes()
     if hashlib.sha256(helper).hexdigest() != FETCH_SHA: raise ValueError('RAM transfer helper hash mismatch')
     target = '/tmp/mirror-fetch-'+recovery.token
@@ -114,12 +114,12 @@ def deploy(recovery, output, seconds):
     mac = bytearray(secrets.token_bytes(6)); mac[0] = (mac[0]|2)&254
     identity = ':'.join(f'{b:02X}' for b in mac)
     command = (f"umask 077; mkdir {remote}; (cd {remote} || exit; unset LD_PRELOAD; "
-               f"exec {binary} '{NAME}' {identity} {seconds} 120 {MAX_VIDEO} 1) "
+               f"exec {binary} '{NAME}' {identity} {seconds} 120 {MAX_VIDEO} 1 {width} {height} {fps}) "
                f"</dev/null >{remote}/receiver.log 2>&1 & echo $! >{remote}/receiver.pid")
     recovery.diagnostic(command)
     pidtext = recovery.diagnostic(f'cat {remote}/receiver.pid; cat {remote}/receiver.log')
     pid = int(pidtext.splitlines()[0])
-    (output/'device-session.json').write_text(json.dumps(dict(pid=pid,remote=remote,binary=binary,helper=target,receiver_sha256=hashlib.sha256(receiver).hexdigest()),indent=2)+'\n')
+    (output/'device-session.json').write_text(json.dumps(dict(pid=pid,remote=remote,binary=binary,helper=target,receiver_sha256=hashlib.sha256(receiver).hexdigest(),requested=[width,height],max_fps=fps),indent=2)+'\n')
     return remote,pid
 
 
@@ -132,15 +132,20 @@ def main():
     parser.add_argument('--device',default='http://192.168.5.1')
     parser.add_argument('--seconds',type=int,default=600)
     parser.add_argument('--no-open',action='store_true')
+    parser.add_argument('--width',type=int,default=800)
+    parser.add_argument('--height',type=int,default=480)
+    parser.add_argument('--fps',type=int,default=30)
     args = parser.parse_args()
     if not 30 <= args.seconds <= 1800: parser.error('--seconds must be 30–1800')
+    if not (160 <= args.width <= 1920 and 160 <= args.height <= 1080 and 1 <= args.fps <= 60):
+        parser.error('Width must be 160–1920, height 160–1080, and fps 1–60')
     if not DECODER.exists(): raise RuntimeError('Build preview.swift before starting')
     output = ROOT/'device-snapshots'/('dongle-preview-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ'))
     output.mkdir(mode=0o700)
     recovery = Recovery(args.device,output,'smartBox-9302'); recovery.check_identity()
     print('Deploying temporary receiver into RAM. No firmware changes. Evidence:',output,flush=True)
-    remote,pid = deploy(recovery,output,args.seconds)
-    (output/'index.html').write_text(PAGE)
+    remote,pid = deploy(recovery,output,args.seconds,args.width,args.height,args.fps)
+    (output/'index.html').write_text(PAGE.replace('No CarPlay connection required',f'Requested {args.width}×{args.height} at up to {args.fps} fps · No CarPlay connection required'))
     server = ThreadingHTTPServer(('127.0.0.1',0),partial(QuietHandler,directory=str(output)))
     threading.Thread(target=server.serve_forever,daemon=True).start()
     url = f'http://127.0.0.1:{server.server_port}/'
