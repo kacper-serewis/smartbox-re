@@ -1,5 +1,47 @@
 # Active mode on the pairing screen
 
+## PIN and receiver diagnostics extension
+
+The current source also displays the receiver's four-digit pairing code in
+mirroring mode, including leading zeros. The Bluetooth prompt becomes a receiver
+status line (waiting, pairing, waiting for USB/video output, unsupported
+resolution, invalid video, or sending video). Below the mode/PIN, a statistics
+line shows current or last video dimensions and the forwarded-frame count. The
+software version remains on the final line. No phone text or raw log messages
+are inserted into LVGL.
+
+These are pairing-screen diagnostics, not an overlay on the phone video. `Sent`
+counts frames submitted to the vendor transport and does not confirm successful
+decoding on the car. Dimensions are the phone video's dimensions, not a measured
+head-unit resolution. Last dimensions and frame counts survive video teardown
+within the application session. The PIN disappears during forwarding and returns
+after teardown while the same receiver is still available. Stopping the receiver
+clears it; CarPlay hides all mirroring diagnostics and restores the original
+Bluetooth prompt.
+
+The UI reads a separate bounded snapshot under a short mutex, without acquiring
+the video-frame lock or reading status files on every redraw. The existing LVGL
+object validation and UI-thread-only updates remain in place. The four-line
+mode/PIN/stats/version block is intended for the existing 800×480 layout; the new
+expanded layout has not yet been visually verified on the dongle. The live tests
+below verified the earlier two-line mode/version layout only.
+
+The extension passed the host label tests with AddressSanitizer and
+UndefinedBehaviorSanitizer, plus the RV32 bridge/receiver checks in
+`firmwares/research/emulation/mirror-20260920T184129.116020Z`. The bridge checks
+include PIN publication, leading zeros, restoring the PIN after video teardown,
+clearing it on receiver stop, hiding late PIN callbacks in CarPlay, last-video
+statistics, and the unsupported-resolution status. Frame statistics count
+forwarded access units, not the number of H.264 slice callbacks.
+
+Built separately at
+`firmwares/experiments/hw501_131_mirroring_density137.5_screeninfo/` with archive
+SHA-256 `dee78e2cd39537176bf3039f749ae63ec6a8e9e76d2e5251b83a61634bf8cd7e`.
+The verified app image occupies 4,964,352 of 5,242,880 bytes. This update has not
+been flashed; the existing autorestart release was left intact.
+
+## Original mode-label verification
+
 The experimental bridge adds `Mode: CarPlay` or `Mode: Screen Mirroring` above
 the existing `SW_Ver` line on the dongle's locally rendered pairing screen.
 The Bluetooth name and version remain visible. It does not overlay phone video

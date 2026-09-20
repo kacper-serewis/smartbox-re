@@ -52,9 +52,27 @@ int main(void) {
     feed(slices, sizeof(slices)); assert(frames == 6 && last_length == 6);
     assert(!memcmp(last_frame, "\0\0\0\1\x65\x34", 6));
     device_pin(NULL, "1234"); assert(!strcmp(pairing_pin, "1234"));
+    char screen_pin[5];
+    assert(!strcmp(pairing_mode_name(screen_pin), "Screen Mirroring"));
+    assert(!strcmp(screen_pin, "1234"));
     device_pin(NULL, "x\"\n!"); assert(!strcmp(pairing_pin, "1234"));
+    device_pin(NULL, "0042"); pairing_mode_name(screen_pin); assert(!strcmp(screen_pin, "0042"));
+    strcpy(receiver_pairing_pin,"0042");
+    device_disconnect(NULL);pairing_mode_name(screen_pin);assert(!strcmp(screen_pin,"0042"));
+    char screen_status[64],screen_stats[64];
+    pairing_diagnostics(screen_status,screen_stats);
+    assert(!strcmp(screen_status,"SmartBox Mirror: waiting for iPhone"));
+    /* The final frame has two slices; count access units, not slice callbacks. */
+    assert(forwarded == 5);
+    assert(strstr(screen_stats,"Last video:") && strstr(screen_stats,"Sent: 5"));
+    bridge_state="unsupported_video";status_write();pairing_diagnostics(screen_status,screen_stats);
+    assert(!strcmp(screen_status,"SmartBox Mirror: unsupported resolution"));
     assert(command("stop mirroring\n") == 0);
+    pairing_mode_name(screen_pin); assert(!screen_pin[0]);
     assert(command("start carplay\n") == 0 && !mirror_selected && controls == 2 && starts == 2);
+    /* Even a late receiver callback must never show a mirroring PIN in CarPlay. */
+    device_pin(NULL, "9876");
+    assert(!strcmp(pairing_mode_name(screen_pin), "CarPlay") && !screen_pin[0]);
     assert(command("start carplay\n") == 0 && controls == 2 && starts == 2);
     assert(command("bogus\n") != 0);
     puts("PASS: mode hooks, fallback, Annex B normalization, config/IDR gating, malformed input, PIN sanitization");

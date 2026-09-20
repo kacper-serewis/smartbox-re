@@ -22,12 +22,29 @@ static start_fn stock_start;
 static frame_fn stock_video;
 static pthread_mutex_t mode_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t frame_lock = PTHREAD_MUTEX_INITIALIZER;
+/* The UI must not acquire frame_lock: vendor video calls can invoke LVGL. */
+static pthread_mutex_t pairing_display_lock = PTHREAD_MUTEX_INITIALIZER;
+static char pairing_display_pin[5];
+static char pairing_display_status[64] = "SmartBox Mirror: starting";
+static char pairing_display_stats[64] = "Video: no frames received yet";
+static void pairing_diagnostics(char status[64], char stats[64]) {
+    pthread_mutex_lock(&pairing_display_lock);
+    memcpy(status, pairing_display_status, 64);
+    memcpy(stats, pairing_display_stats, 64);
+    pthread_mutex_unlock(&pairing_display_lock);
+}
 static bool mirror_selected, native_ready, stock_suppressed;
 static bool native_bound;
-static const char *pairing_mode_name(void) {
+static const char *pairing_mode_name(char pin[5]) {
     pthread_mutex_lock(&mode_lock);
     bool mirror = mirror_selected;
     pthread_mutex_unlock(&mode_lock);
+    pin[0] = 0;
+    if (mirror) {
+        pthread_mutex_lock(&pairing_display_lock);
+        memcpy(pin, pairing_display_pin, 5);
+        pthread_mutex_unlock(&pairing_display_lock);
+    }
     return mirror ? "Screen Mirroring" : "CarPlay";
 }
 #include "pairing_label.h"
@@ -42,12 +59,37 @@ static size_t sps_len, pps_len;
 static bool config_sent, have_idr;
 static uint64_t forwarded;
 static char pairing_pin[5];
+static char receiver_pairing_pin[5]; /* fixed receiver PIN survives video teardown */
 static const char *bridge_state = "starting";
 static float source_width, source_height;
 static double last_status;
+static unsigned last_video_width, last_video_height;
 
 /* All status fields are numbers or internal enum strings; no phone-provided text. */
 static void status_write(void) {
+    pthread_mutex_lock(&pairing_display_lock);
+    memcpy(pairing_display_pin, pairing_pin, sizeof(pairing_display_pin));
+    const char *description = "starting";
+    const struct { const char *state, *text; } descriptions[] = {
+        {"waiting", "waiting for iPhone"}, {"pairing", "pairing iPhone"},
+        {"waiting_for_stock_app", "waiting for USB transport"},
+        {"waiting_for_car_video", "waiting for video output"},
+        {"unsupported_video", "unsupported resolution"},
+        {"invalid_video", "invalid video data"},
+        {"forwarding_unverified", "sending video"}, {"carplay", "CarPlay active"}
+    };
+    for (unsigned i=0; i<sizeof(descriptions)/sizeof(descriptions[0]); i++)
+        if (!strcmp(bridge_state, descriptions[i].state)) description = descriptions[i].text;
+    snprintf(pairing_display_status, sizeof(pairing_display_status), "SmartBox Mirror: %s", description);
+    if (source_width > 0 && source_height > 0) {
+        last_video_width = (unsigned)source_width; last_video_height = (unsigned)source_height;
+    }
+    if (last_video_width && last_video_height)
+        snprintf(pairing_display_stats, sizeof(pairing_display_stats), "%s: %ux%u | Sent: %" PRIu64,
+                 source_width > 0 && source_height > 0 ? "Video" : "Last video",
+                 last_video_width, last_video_height, forwarded);
+    else snprintf(pairing_display_stats, sizeof(pairing_display_stats), "Video: no frames received yet");
+    pthread_mutex_unlock(&pairing_display_lock);
     FILE *f = fopen(STATUS_FILE ".new", "w");
     if (!f) return;
     fprintf(f, "{\"state\":\"%s\",\"pin\":\"%s\",\"frames_forwarded\":%" PRIu64
@@ -76,7 +118,8 @@ static void device_disconnect(void *cls) {
     /* Avoid stop-event teardown of the shared car-side stream; return to waiting. */
     sps_len = pps_len = 0; config_sent = have_idr = false;
     source_width = source_height = 0;
-    pairing_pin[0] = 0; bridge_state = "waiting"; status_write();
+    memcpy(pairing_pin, receiver_pairing_pin, sizeof(pairing_pin));
+    bridge_state = "waiting"; status_write();
     pthread_mutex_unlock(&frame_lock);
 }
 static void device_reset(void *cls, reset_type_t reason) { (void)reason; device_disconnect(cls); }
@@ -188,6 +231,9 @@ static void stop_receiver(void) {
     if (mirror_server) raop_destroy(mirror_server);
     if (mirror_dns) dnssd_destroy(mirror_dns);
     mirror_server = NULL; mirror_dns = NULL;
+    pthread_mutex_lock(&frame_lock);
+    receiver_pairing_pin[0] = 0;
+    pthread_mutex_unlock(&frame_lock);
     device_disconnect(NULL);
 }
 static int start_receiver(void) {
@@ -235,6 +281,7 @@ static int start_receiver(void) {
     advertised_airplay = true;
     pthread_mutex_lock(&frame_lock);
     snprintf(pairing_pin, sizeof(pairing_pin), "%04u", pin_number);
+    memcpy(receiver_pairing_pin, pairing_pin, sizeof(receiver_pairing_pin));
     bridge_state = "waiting"; status_write(); pthread_mutex_unlock(&frame_lock);
     return 0;
 failed:

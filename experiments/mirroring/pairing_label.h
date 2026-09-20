@@ -8,14 +8,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
-static const char *pairing_mode_name(void);
+static const char *pairing_mode_name(char pin[5]);
+static void pairing_diagnostics(char status[64], char stats[64]);
 static void (*pairing_set_text)(void *, const char *);
 static uint32_t (*pairing_timer)(void);
 static bool (*pairing_valid)(const void *);
 static bool (*pairing_type)(const void *, const void *);
 static char *(*pairing_get_text)(const void *);
 static const void *pairing_label_class;
-static struct { void *object; char original[64], rendered[112]; } pairing_labels[4];
+static struct { void *object; char original[64], rendered[256]; } pairing_labels[4];
 static void pairing_resolve(void) {
     if (!pairing_set_text) pairing_set_text = dlsym(RTLD_NEXT, "lv_label_set_text");
     if (!pairing_timer) pairing_timer = dlsym(RTLD_NEXT, "lv_timer_handler");
@@ -27,11 +28,25 @@ static void pairing_resolve(void) {
 static bool pairing_available(void) {
     return native_bound && pairing_set_text && pairing_valid && pairing_type && pairing_get_text && pairing_label_class;
 }
+static void pairing_format(char *out, size_t size, const char *original) {
+    char pin[5] = {0};
+    const char *mode = pairing_mode_name(pin);
+    bool mirror = !strcmp(mode, "Screen Mirroring");
+    char status[64], stats[64]; pairing_diagnostics(status, stats);
+    if (!strncmp(original, "Please connect Bluetooth:", 25)) {
+        snprintf(out, size, "%s", mirror ? status : original);
+    } else if (mirror && strnlen(pin, sizeof(pin)) == 4 && strspn(pin, "0123456789") == 4) {
+        snprintf(out, size, "Mode: %s\nPairing code: %s\n%s\n%s", mode, pin, stats, original);
+    } else if (mirror) {
+        snprintf(out, size, "Mode: %s\n%s\n%s", mode, stats, original);
+    } else snprintf(out, size, "Mode: %s\n%s", mode, original);
+}
 void lv_label_set_text(void *object, const char *text) {
     pairing_resolve();
     if (!pairing_set_text) return;
     /* NULL asks LVGL to refresh its current text. Preserve that behavior. */
-    if (!pairing_available() || !object || !text || strncmp(text, "SW_Ver : ", 9) ||
+    if (!pairing_available() || !object || !text ||
+        (strncmp(text, "SW_Ver : ", 9) && strncmp(text, "Please connect Bluetooth:", 25)) ||
         strnlen(text, sizeof(pairing_labels[0].original)) >= sizeof(pairing_labels[0].original)) {
         pairing_set_text(object, text); return;
     }
@@ -43,8 +58,7 @@ void lv_label_set_text(void *object, const char *text) {
     if (slot==4) { pairing_set_text(object, text); return; }
     pairing_labels[slot].object = object;
     snprintf(pairing_labels[slot].original, sizeof(pairing_labels[slot].original), "%s", text);
-    snprintf(pairing_labels[slot].rendered, sizeof(pairing_labels[slot].rendered), "Mode: %s\n%s",
-             pairing_mode_name(), text);
+    pairing_format(pairing_labels[slot].rendered, sizeof(pairing_labels[slot].rendered), text);
     pairing_set_text(object, pairing_labels[slot].rendered);
 }
 uint32_t lv_timer_handler(void) {
@@ -59,8 +73,8 @@ uint32_t lv_timer_handler(void) {
         if (!current || strcmp(current, pairing_labels[i].rendered)) {
             pairing_labels[i].object = NULL; continue;
         }
-        char updated[112];
-        snprintf(updated, sizeof(updated), "Mode: %s\n%s", pairing_mode_name(), pairing_labels[i].original);
+        char updated[256];
+        pairing_format(updated, sizeof(updated), pairing_labels[i].original);
         if (strcmp(updated, current)) {
             memcpy(pairing_labels[i].rendered, updated, strlen(updated)+1);
             pairing_set_text(object, updated);
