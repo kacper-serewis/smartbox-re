@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import re
 import secrets
+import tarfile
 import time
 from urllib.parse import urlsplit
 
@@ -171,6 +172,18 @@ class Recovery:
         (self.output/'independent-updater.json').write_text(json.dumps(updater, indent=2)+'\n')
         print(f'Independent updater verified on port {PORT}; PID/PGID/session {pid}.', flush=True)
 
+    def verify_flash(self):
+        with tarfile.open(ROLLBACK/'hw501_131.tar') as archive:
+            image = archive.extractfile('app.img').read()
+        if len(image) % 512:
+            raise ValueError('Rollback image is not sector aligned')
+        expected = hashlib.md5(image).hexdigest()
+        result = self.diagnostic(f'dd if=/dev/by-name/app bs=512 count={len(image)//512} 2>/dev/null | md5sum', self.alternate)
+        if not result.split() or result.split()[0] != expected:
+            raise ValueError('Flash readback did not match; keep power connected and inspect the saved evidence')
+        (self.output/'readback.json').write_text(json.dumps(dict(image_bytes=len(image),expected_md5=expected,matched=True))+'\n')
+        print('Flash readback matches the density137.5 image. Restart and verify the running application.', flush=True)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -181,6 +194,7 @@ def main():
     output = ROOT/'device-snapshots'/('recovery-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ'))
     output.mkdir(parents=True)
     print('Saving recovery evidence to:', output, flush=True)
+    flash_requested = False
     try:
         metadata, raw = load_release(ROLLBACK)
         if metadata['sha256'] != ROLLBACK_SHA:
@@ -195,12 +209,17 @@ def main():
         device.opener = recovery.http.opener  # Proxy-free and rejects redirects.
         print('Restoring density137.5 v131 through the independent updater. Keep power connected.', flush=True)
         stage(device, metadata, raw)
+        flash_requested = True
         apply(device, metadata['version'])
         (output/'result.json').write_text(json.dumps({'reported_complete':True,'rollback_sha256':ROLLBACK_SHA})+'\n')
+        recovery.verify_flash()
     except Exception as error:
         (output/'error.txt').write_text(str(error)+'\n')
         print('Recovery stopped:', error, flush=True)
-        print('Do not repeat flashing or remove power if completion is unconfirmed. Share this evidence folder.', flush=True)
+        if flash_requested:
+            print('Do not repeat flashing or remove power if completion is unconfirmed. Share this evidence folder.', flush=True)
+        else:
+            print('No firmware flash was requested. Share this evidence folder before proceeding.', flush=True)
         raise SystemExit(1)
 
 
