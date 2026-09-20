@@ -1,0 +1,10 @@
+--- 2022.01.24.1903/script/start_mass_storage.sh
++++ 2022.06.08.1109/script/start_mass_storage.sh
+@@ -14,6 +14,7 @@
+ 	echo "FakeCarLifeDevice not support change to USB mass storage" >> /dev/console
+ 	exit 0
+ fi
++riddleBoxCfg -g UDiskPassThrough |grep 0 && echo "Udisk pass through mode closed" >> /dev/console && exit 0
+ usb_dev_path=/dev/sda
+ if [ $# -gt 0 ];then
+ 	usb_dev_path=$1

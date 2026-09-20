@@ -1,0 +1,11 @@
+--- 2022.01.24.1903/script/after_shutdown.sh
++++ 2022.06.08.1109/script/after_shutdown.sh
+@@ -29,8 +29,6 @@
+ 
+ #saveLastLog /var/log/box_last_reboot.log
+ 
+-#8987 need set boudrate to 115200 when reboot
+-test /tmp/moal.ko && hcitool cmd 0x3f 0x0009 0x00 0xc2 0x01 0x00
+ sync
+ df -h |grep /data && umount /data
+ /bin/umount -a -r

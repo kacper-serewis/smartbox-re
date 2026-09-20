@@ -1,0 +1,16 @@
+### Send pair-setup HK failed: %d, %#m
+####  _ChaChaDecryptAudio failed: %#m
+BTAudioDevice_Signal
+BoxAudioConvert err.
+BoxAudioConvertInit ctx:%p, src format:%d-%d-%d, dst format:%d-%d-%d
+BoxAudioConvertInit error.
+BoxAudioRingBufferInit malloc error.
+RiddleAudioUtils
+SONY CAR AUDIO
+Sample message for keylen<blocklen
+Sample message for keylen<blocklen, with truncated tag
+Sample message for keylen=blocklen
+Send pair-setup HK outputLen %d, outputContent: 
+Send pair-setup HK, type %d
+USB4931
+in BoxAudioJitterBufferInit: malloc error.
