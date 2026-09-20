@@ -1,6 +1,8 @@
 # Ordinary screen mirroring through the HW501
 
-2026-09-19. Feasibility investigation only; no mirroring firmware built or tested.
+2026-09-19. The Mac prototype has progressed to an RV32 receiver and experimental
+device bridge. A [flashable update](../../experiments/mirroring/FLASHING.md) is
+built and checked offline. Mirroring has not yet been tested on the dongle/Corsa.
 
 ## Proposed architecture
 
@@ -35,9 +37,45 @@ Initial scope should be video-only and controlled from the phone. Car-screen tou
 
 ## Implementation checkpoints
 
+### Connection mode selection
+
+User requirement: keep both **CarPlay** and **Screen Mirroring** selectable from
+the adapter's settings page. Proposed label: **Connection mode**. Default to
+CarPlay and persist the selected mode across power cycles. For the first
+implementation, apply changes on adapter restart; live switching can follow
+once session teardown is understood.
+
+- **CarPlay:** use the existing phone connection and display-density settings.
+- **Screen Mirroring:** suppress phone-side CarPlay auto-connection, advertise
+  the mirroring receiver, and let the user choose it in iPhone Screen Mirroring.
+  Keep the settings page accessible so the user can return to CarPlay.
+- Both modes still need the stock car-facing wired CarPlay session and sender.
+  Stopping the entire stock application would also stop that path; service
+  selection must distinguish phone-side reception from car-side transport.
+
+The stock web page reads `getboxsettings` and posts `updateboxsettings`, with a
+message that changes take effect next time. Its existing **Media mode** changes
+`audiomode`; it is unrelated to this selector. A new persistent field and backend
+handling are required. Stock acceptance/storage of an extra field has not been
+established, so adding only a picker would not implement mode switching.
+
+The [native selector service](../../experiments/mode/README.md), web UI,
+persistence, and driver dispatch are implemented, with native and RV32/QEMU
+tests. An experimental launcher and preload bridge now connect the driver to
+phone-side startup hooks and the stock video callback. The firmware builder
+includes both settings-page links and validates the update image. Complete
+on-device startup/session behavior remains unverified.
+
+### Receiver and forwarding
+
 1. Establish receiver discovery, pairing, and an ordinary mirroring session independently of the phone's CarPlay control connection. Determine whether the stock receiver can do this before replacing it.
 2. Capture negotiated codec configuration and actual dimensions; compare them with the car-facing stream requirements.
 3. Forward a compatible landscape video stream using the existing sender and required car-side session state. Preserve the current CarPlay/density mode as a separate fallback.
 4. Validate disconnects and parameter-set changes; add audio and orientation handling only after video works.
 
-None of these checkpoints has been demonstrated end to end. This is a more plausible reuse of the existing compressed-video path than a live pixel overlay, but it remains a development project rather than a discovered setting.
+The Mac prototype implements discovery, PIN handling, and a bounded H.264 capture
+sink using the pinned UxPlay protocol library. Local endpoint/capture tests are
+available; ordinary mirroring from the user's iOS 27 phone is still untested.
+None of the checkpoints has been demonstrated end to end on the dongle. This is
+a more plausible reuse of the existing compressed-video path than a live pixel
+overlay, but it remains a development project rather than a discovered setting.

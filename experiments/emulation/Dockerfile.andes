@@ -1,0 +1,5 @@
+FROM smartbox-emulation:local
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential ninja-build pkg-config libglib2.0-dev libpixman-1-dev \
+    zlib1g-dev python3-venv python3-pip meson git \
+    && rm -rf /var/lib/apt/lists/*

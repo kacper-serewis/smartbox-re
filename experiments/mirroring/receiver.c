@@ -81,7 +81,7 @@ static void dimensions(void *cls, float *sw, float *sh, float *w, float *h) {
         c->reason = "write_error"; c->failed = 1;
     }
     pthread_mutex_unlock(&c->lock);
-    printf("Phone reports source %.0fx%.0f; display %.0fx%.0f\n", *sw, *sh, *w, *h);
+    printf("Sender reports source %.0fx%.0f; display %.0fx%.0f\n", *sw, *sh, *w, *h);
 }
 static void video(void *cls, raop_ntp_t *ntp, video_decode_struct *data) {
     capture_t *c = cls;
@@ -108,7 +108,7 @@ static void video(void *cls, raop_ntp_t *ntp, video_decode_struct *data) {
     }
     int result = fprintf(c->events,
         "{\"event\":\"packet\",\"offset\":%" PRIu64 ",\"length\":%d,"
-        "\"nals\":%d,\"local_us\":%" PRIu64 ",\"remote_us\":%" PRIu64 "}\n",
+        "\"nals\":%d,\"local_ns\":%" PRIu64 ",\"remote_ns\":%" PRIu64 "}\n",
         c->bytes, data->data_len, data->nal_count, data->ntp_time_local, data->ntp_time_remote);
     c->bytes += n; c->packets++;
     if (result < 0) { c->reason = "write_error"; c->failed = 1; }
@@ -117,6 +117,28 @@ done:
 }
 static void log_message(void *cls, int level, const char *message) {
     fprintf(stderr, "[airplay:%d] %s\n", level, message);
+}
+
+static raop_callbacks_t capture_callbacks(capture_t *c) {
+    raop_callbacks_t callbacks = {0};
+    callbacks.cls = c;
+    callbacks.audio_process = audio; callbacks.video_process = video;
+    callbacks.video_pause = noop; callbacks.video_resume = noop;
+    callbacks.conn_feedback = noop; callbacks.conn_reset = reset;
+    callbacks.video_reset = video_reset; callbacks.conn_init = noop; callbacks.conn_destroy = noop;
+    callbacks.audio_flush = noop; callbacks.video_flush = noop;
+    callbacks.audio_set_client_volume = volume; callbacks.audio_set_volume = set_volume;
+    callbacks.audio_set_metadata = metadata; callbacks.audio_set_coverart = metadata;
+    callbacks.audio_stop_coverart_rendering = noop; callbacks.audio_set_progress = progress;
+    callbacks.audio_remote_control_id = identifiers; callbacks.export_dacp = identifiers;
+    callbacks.audio_get_format = audio_format; callbacks.video_report_size = dimensions;
+    callbacks.mirror_video_running = running; callbacks.report_client_request = admit;
+    callbacks.display_pin = pin; callbacks.register_client = register_client;
+    callbacks.check_register = check_register; callbacks.video_set_codec = codec;
+    callbacks.on_video_play = hls_play; callbacks.on_video_scrub = hls_float;
+    callbacks.on_video_rate = hls_float; callbacks.on_video_stop = noop;
+    callbacks.on_video_playlist_remove = hls_remove; callbacks.on_video_acquire_playback_info = hls_info;
+    return callbacks;
 }
 
 int main(int argc, char **argv) {
@@ -140,24 +162,7 @@ int main(int argc, char **argv) {
     if (!c.video || !c.events) { perror("capture output"); return 1; }
     setvbuf(c.events, NULL, _IOLBF, 0);
     signal(SIGINT, on_signal); signal(SIGTERM, on_signal); signal(SIGPIPE, SIG_IGN);
-    raop_callbacks_t callbacks = {0};
-    callbacks.cls = &c;
-    callbacks.audio_process = audio; callbacks.video_process = video;
-    callbacks.video_pause = noop; callbacks.video_resume = noop;
-    callbacks.conn_feedback = noop; callbacks.conn_reset = reset;
-    callbacks.video_reset = video_reset; callbacks.conn_init = noop; callbacks.conn_destroy = noop;
-    callbacks.audio_flush = noop; callbacks.video_flush = noop;
-    callbacks.audio_set_client_volume = volume; callbacks.audio_set_volume = set_volume;
-    callbacks.audio_set_metadata = metadata; callbacks.audio_set_coverart = metadata;
-    callbacks.audio_stop_coverart_rendering = noop; callbacks.audio_set_progress = progress;
-    callbacks.audio_remote_control_id = identifiers; callbacks.export_dacp = identifiers;
-    callbacks.audio_get_format = audio_format; callbacks.video_report_size = dimensions;
-    callbacks.mirror_video_running = running; callbacks.report_client_request = admit;
-    callbacks.display_pin = pin; callbacks.register_client = register_client;
-    callbacks.check_register = check_register; callbacks.video_set_codec = codec;
-    callbacks.on_video_play = hls_play; callbacks.on_video_scrub = hls_float;
-    callbacks.on_video_rate = hls_float; callbacks.on_video_stop = noop;
-    callbacks.on_video_playlist_remove = hls_remove; callbacks.on_video_acquire_playback_info = hls_info;
+    raop_callbacks_t callbacks = capture_callbacks(&c);
     ntp_global_init();
     int error = 0, status = 1;
     bool raop_advertised = false, airplay_advertised = false;

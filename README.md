@@ -12,6 +12,10 @@ It samples the running app version and CarPlay display status for 60 seconds, th
 
 ## Downloaded firmware
 
+An [experimental flashable mirroring image](experiments/mirroring/FLASHING.md)
+now includes CarPlay/Screen Mirroring selection, the RV32 receiver/bridge, and
+density137.5. Offline tests pass; iPhone/Corsa operation is not yet verified.
+
 Downloaded and compared the public HW501 application updates on 2026-09-19.
 
 | Release | Archive bytes | Status |
@@ -28,6 +32,12 @@ The deeper [binary analysis](reports/binary-analysis.md) identifies actual iAP2 
 The [Corsa display experiment](reports/display/experiment.md) documents the verified running v131 baseline, a guarded physical-display-metadata patch, emulator validation, and offline install/rollback commands. On their Opel Corsa 2017 with iOS 27, the user confirmed smaller screen items and Smart Display Zoom availability with density125, then **5 columns × 3 rows (15 apps per page)** with density150, up from 4×2. The successful density150 package is preserved under `firmwares/experiments/hw501_131_density150/`.
 
 ## Local artifacts
+
+The [connection-mode service](experiments/mode/README.md) implements the CarPlay /
+Screen Mirroring selector, persistent choice, and startup dispatch. Native and
+RV32/QEMU tests pass; integration with the dongle's phone-side sessions and
+mirroring bridge is still pending. The [QEMU setup](experiments/emulation/README.md)
+also reaches partial stock-application execution using Andes' emulator fork.
 
 Each available version has its own directory under `firmwares/hw501/<version>/`:
 

@@ -76,7 +76,7 @@ def main() -> int:
                 "max_bytes": args.max_mib * 1024 * 1024, "stage": "mac_capture_only"}
     (output / "capture.json").write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Saving locally to: {output}\nKeep the Mac and iPhone on the same Wi-Fi.\n"
-          "Select SmartBox Mirror Lab in Control Center > Screen Mirroring.\n"
+          f"Select {args.name} in Control Center > Screen Mirroring.\n"
           "The PIN will appear here. Audio is discarded; video is recorded, not displayed.\n"
           "Stop with Ctrl-C; capture also stops automatically.\n", flush=True)
     command = [str(BINARY), args.name, device_id, str(args.seconds), str(args.capture_seconds),

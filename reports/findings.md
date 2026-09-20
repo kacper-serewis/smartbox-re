@@ -58,4 +58,9 @@ These are observed strings and archive timestamps, not proof of the application 
 
 All three tar sizes match the chunk API. Their first and final chunks match byte-for-byte. Every image passes its bundled MD5; all SquashFS images extract successfully. The comparison records SHA-256 for each archive and regular file and compares symlink targets and file permissions. Timestamps are excluded from file-change counts.
 
-No firmware program was executed and no adapter was flashed. Functional differences are inferred only where noted; no claims about real-world stability or board-specific compatibility were tested.
+The original release comparison was static and did not execute firmware or flash
+an adapter. Later work includes the display experiments and a bounded
+[QEMU application probe](../experiments/emulation/README.md). The latter starts
+the stock application with Andes instruction support and substitute system
+libraries, but encounters missing hardware and a SIGSEGV; it does not establish
+full device emulation or real-world stability.
