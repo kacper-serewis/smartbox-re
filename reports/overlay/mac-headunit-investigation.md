@@ -219,3 +219,9 @@ The tests restored Mac host mode and the original USB descriptor successfully;
 no firmware changed or reboot was needed. Repeatable scoped tooling and limits
 are in [BRIDGE.md](../../experiments/macos-usb/BRIDGE.md#usb-role-switching-and-iap2-verified).
 Evidence: `device-snapshots/mac-role-switch-20260920T164711.438482Z/control-probe`.
+
+Subsequent probes completed authentication using a locally generated test
+identity, received identification acceptance, and captured CarPlay availability.
+The USB IPv6 network also comes up. The remaining work is the AirPlay/CarPlay
+network receiver and display pipeline; screen dimensions are negotiated there,
+not in the identification message. See [authentication and network evidence](mac-auth-analysis/README.md).

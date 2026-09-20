@@ -73,5 +73,12 @@ int main() {
         assert(pos == id.size() && usb);
         auto accepted = packet(3, 3, emptyMessage(0x1d02));
         out.clear(); assert(probe.feed(accepted.data(), accepted.size(), out)); assert(probe.done());
+        auto available = packet(4, 3, {0x40,0x40,0,10,0x43,0,0,4,0,1});
+        out.clear(); assert(probe.feed(available.data(), available.size(), out)); assert(probe.availabilityReceived);
+        auto start = probe.startSession("fe80::1234", 51234);
+        assert(start[5] == 4 && start[6] == 4 && be16(start.data() + 13) == 0x4301);
+        assert(checksumValid(start.data(), 9) && checksumValid(start.data() + 9, start.size() - 9));
+        assert(be16(start.data() + 17) == 0 && be16(start.data() + 21) == 0);
+        assert(start[23] == 'f' && start[24] == 'e'); // nested list item begins at offset 23
     }
 }

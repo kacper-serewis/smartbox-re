@@ -11,6 +11,7 @@
 #include "IAP2Probe.h"
 #include "IAP2AuthProbe.h"
 #include <memory>
+#include <arpa/inet.h>
 
 static volatile sig_atomic_t interrupted = 0;
 static void interruptHandler(int) { interrupted = 1; }
@@ -37,7 +38,8 @@ static bool disconnected(io_registry_entry_t controller) {
 int main(int argc, const char **argv) {
     @autoreleasepool {
         unsigned listenSeconds = 0;
-        bool identifyProbe = argc == 5 && !strcmp(argv[1], "--identify-probe");
+        bool networkProbe = argc == 6 && !strcmp(argv[1], "--network-probe");
+        bool identifyProbe = networkProbe || (argc == 5 && !strcmp(argv[1], "--identify-probe"));
         bool authProbe = identifyProbe || (argc == 5 && !strcmp(argv[1], "--auth-probe"));
         bool controlProbe = authProbe || (argc == 3 && !strcmp(argv[1], "--control-probe"));
         bool synProbe = controlProbe || (argc == 3 && !strcmp(argv[1], "--syn-probe"));
@@ -52,7 +54,7 @@ int main(int argc, const char **argv) {
         BOOL configure = listenSeconds || (argc == 2 && !strcmp(argv[1], "--configure"));
         BOOL open = configure || (argc == 2 && !strcmp(argv[1], "--open"));
         if (argc != 1 && !open) {
-            fprintf(stderr, "usage: mac-usb-interface [--open | --configure | --listen SECONDS | --syn-probe SECONDS | --control-probe SECONDS | --auth-probe SECONDS CERT.der KEY.der]\n"); return 2;
+            fprintf(stderr, "usage: mac-usb-interface [--open | --configure | --listen SECONDS | --syn-probe SECONDS | --control-probe SECONDS | --auth-probe SECONDS CERT.der KEY.der | --identify-probe SECONDS CERT.der KEY.der | --network-probe SECONDS CERT.der KEY.der READY.json]\n"); return 2;
         }
         NSData *certificate = nil;
         SecKeyRef testKey = nullptr;
@@ -160,7 +162,7 @@ int main(int argc, const char **argv) {
                                 NSMutableArray *states = [NSMutableArray array], *received = [NSMutableArray array], *detectWrites = [NSMutableArray array];
                                 NSDictionary *previous = nil;
                                 unsigned totalReceived = 0, writes = 0;
-                                bool configured = false, synSent = false, ackSent = false, detectSent = false;
+                                bool configured = false, synSent = false, ackSent = false, detectSent = false, sessionSent = false;
                                 std::unique_ptr<iap2probe::AuthProbe> authentication;
                                 const uint8_t detect[] = {0xff, 0x55, 0x02, 0x00, 0xee, 0x10};
                                 auto start = std::chrono::steady_clock::now();
@@ -175,14 +177,44 @@ int main(int argc, const char **argv) {
                                         if (states.count < 128) [states addObject:state];
                                         previous = state;
                                     }
-                                    if (identifyProbe && authentication && authentication->done()) {
+                                    if (identifyProbe && authentication && authentication->done() &&
+                                        (!networkProbe || authentication->availabilityReceived)) {
                                         // Keep both interfaces present for the network snapshot until
                                         // the independent role helper restores the Mac's host role.
                                         if ([state[@"OnBus"] isEqual:@NO]) break;
-                                        usleep(100000); continue;
+                                        if (networkProbe && !sessionSent) {
+                                            NSData *ready = [NSData dataWithContentsOfFile:@(argv[5])];
+                                            if (ready && ready.length < 1024) {
+                                                id object = [NSJSONSerialization JSONObjectWithData:ready options:0 error:nil];
+                                                NSString *host = [object isKindOfClass:[NSDictionary class]] ? object[@"host"] : nil;
+                                                NSNumber *port = [object isKindOfClass:[NSDictionary class]] ? object[@"port"] : nil;
+                                                struct in6_addr addr;
+                                                if (![host isKindOfClass:[NSString class]] || ![port isKindOfClass:[NSNumber class]] ||
+                                                    port.intValue < 1024 || port.intValue > 65535 ||
+                                                    inet_pton(AF_INET6, host.UTF8String, &addr) != 1 || !IN6_IS_ADDR_LINKLOCAL(&addr)) {
+                                                    report[@"error"] = @"Invalid local USB session endpoint"; operation = kIOReturnBadArgument; break;
+                                                }
+                                                auto reply = authentication->startSession(host.UTF8String, (uint16_t)port.intValue);
+                                                if (reply.empty() || reply.size() > size) { operation = kIOReturnBadArgument; break; }
+                                                memcpy(buffer, reply.data(), reply.size());
+                                                uint64_t sendArgs[] = {[report[@"pipes"][1][@"id"] unsignedLongLongValue], mapping[2], reply.size(), 100};
+                                                uint64_t sent = 0; uint32_t sendCount = 1;
+                                                operation = IOConnectCallScalarMethod(connection, 14, sendArgs, 4, &sent, &sendCount);
+                                                if (!operation && (sendCount != 1 || sent != reply.size())) operation = kIOReturnUnderrun;
+                                                report[@"start_session_write"] = result(operation);
+                                                if (operation) break;
+                                                sessionSent = true; report[@"session_start_sent"] = @YES;
+                                            }
+                                        }
+                                        if (!networkProbe || !sessionSent) { usleep(100000); continue; }
                                     }
                                     if ([state[@"OnBus"] isEqual:@YES] && [state[@"SelectedConfiguration"] unsignedIntValue] > 0) {
                                         configured = true;
+                                        // Start iAP2 only after the USB-bound observer exists, so
+                                        // the dongle cannot select macOS AirPlay before our invitation.
+                                        if (networkProbe && !detectSent && ![[NSFileManager defaultManager] fileExistsAtPath:@(argv[5])]) {
+                                            usleep(100000); continue;
+                                        }
                                         report[@"data_transfer_attempted"] = @YES;
                                         if (!synSent && writes < 3 && std::chrono::steady_clock::now() >= nextDetect) {
                                             memcpy(buffer, detect, sizeof(detect));
@@ -245,6 +277,7 @@ int main(int argc, const char **argv) {
                                                     report[@"authentication_succeeded"] = @(authentication->authenticated);
                                                     report[@"identification_requested"] = @(authentication->identificationRequested);
                                                     report[@"identification_accepted"] = @(authentication->identificationAccepted);
+                                                    report[@"carplay_availability_received"] = @(authentication->availabilityReceived);
                                                     if (!valid) {
                                                         report[@"error"] = @(authentication->error.c_str());
                                                         operation = kIOReturnBadArgument; break;
@@ -298,6 +331,18 @@ int main(int argc, const char **argv) {
                                                 }
                                                 if (totalReceived >= 16384) break;
                                             }
+                                        } else if (networkProbe && sessionSent && r == kIOReturnAborted) {
+                                            // Transfer cancellation can precede the controller's
+                                            // published disconnected state during host-role restore.
+                                            for (unsigned i = 0; i < 20 && !disconnected(controller); ++i) usleep(25000);
+                                            if (disconnected(controller)) report[@"role_watchdog_disconnected"] = @YES;
+                                            else if (std::chrono::steady_clock::now() - start >= std::chrono::seconds(14)) {
+                                                // The runner independently verifies the role helper's
+                                                // restore result. Preserve this terminal transport status.
+                                                report[@"transport_aborted_at_end"] = result(r);
+                                            }
+                                            else { report[@"read_error"] = result(r); operation = r; }
+                                            break;
                                         } else if (r != kIOReturnTimeout && (uint32_t)r != 0xe0000001) {
                                             report[@"read_error"] = result(r); operation = r; break;
                                         }
@@ -310,6 +355,7 @@ int main(int argc, const char **argv) {
                                 report[@"received_hex"] = received;
                                 report[@"received_bytes"] = @(totalReceived);
                                 report[@"interrupted"] = @(interrupted != 0);
+                                report[@"listen_elapsed_ms"] = @(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
                             }
                             IOReturn release = call(@"release_buffer", 19, &mapping[2], 1, nullptr, 0);
                             if (!operation) operation = release;

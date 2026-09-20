@@ -16,11 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', action='store_true', help='Publish, probe the owned dongle, and restore using native administrator dialogs')
-    parser.add_argument('--stage', choices=('detect', 'syn', 'control', 'auth', 'identify'), default='control')
+    parser.add_argument('--stage', choices=('detect', 'syn', 'control', 'auth', 'identify', 'network'), default='control')
     parser.add_argument('--collect-network', action='store_true', help='Read the owned dongle network/log state over its Wi-Fi during identification')
     args = parser.parse_args()
-    if args.collect_network and (not args.run or args.stage != 'identify'):
-        parser.error('--collect-network requires --run --stage identify')
+    if args.collect_network and (not args.run or args.stage not in ('identify', 'network')):
+        parser.error('--collect-network requires --run --stage identify or network')
     if platform.system() != 'Darwin':
         parser.error('Requires the prepared macOS machine and loaded protocol-3 bridge')
     out = ROOT / 'device-snapshots' / ('mac-usb-session-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ'))
@@ -61,7 +61,7 @@ def main():
     if status.get('bridge', {}).get('ProbeVersion') != '3':
         raise RuntimeError('Expected the already-installed protocol-3 bridge; no changes made')
     credentials = []
-    if args.stage in ('auth', 'identify'):
+    if args.stage in ('auth', 'identify', 'network'):
         # Ephemeral self-signed bench identity, unrelated to any Apple/car keys.
         cert, key, pem = out / 'test-cert.der', out / 'test-key.der', out / 'test-key.pem'
         with (out / 'test-identity.log').open('w') as log:
@@ -75,10 +75,12 @@ def main():
         credentials = [str(cert), str(key)]
     profile = out / 'profile.json'
     invoke('make-profile', ['--make-profile', str(profile)])
-    listener = role = None
+    listener = role = observer = None
     try:
         invoke('publish', ['--publish', str(profile)], admin=True)
-        flag = {'detect': '--listen', 'syn': '--syn-probe', 'control': '--control-probe', 'auth': '--auth-probe', 'identify': '--identify-probe'}[args.stage]
+        flag = {'detect': '--listen', 'syn': '--syn-probe', 'control': '--control-probe', 'auth': '--auth-probe', 'identify': '--identify-probe', 'network': '--network-probe'}[args.stage]
+        if args.stage == 'network':
+            credentials.append(str(out / 'network-ready.json'))
         with (out / 'listen.json').open('w') as output, (out / 'listen.stderr').open('w') as errors:
             listener = subprocess.Popen([str(out / 'interface'), flag, '30', *credentials], stdout=output, stderr=errors)
             deadline = time.monotonic() + 5
@@ -90,8 +92,13 @@ def main():
                 raise RuntimeError('Interface was not ready; role switch not sent')
             with (out / 'role.json').open('w') as output, (out / 'role.stderr').open('w') as errors:
                 role = subprocess.Popen([str(out / 'role'), '--switch-with-mac-role'], stdout=output, stderr=errors)
-                if args.stage == 'identify':
-                    time.sleep(3)
+                if args.stage in ('identify', 'network'):
+                    if args.stage == 'network':
+                        from mac_carplay_observer import USBObserver
+                        observer = USBObserver(out)
+                        print(f'USB-only observer: [{observer.host}%{observer.name}]:{observer.port}', flush=True)
+                    else:
+                        time.sleep(3)
                     network = subprocess.run(['/sbin/ifconfig', '-a'], capture_output=True, text=True, timeout=5)
                     (out / 'mac-network.txt').write_text(network.stdout + network.stderr)
                     if args.collect_network:
@@ -104,6 +111,8 @@ def main():
                 role.wait(timeout=25)
             listener.wait(timeout=35)
     finally:
+        if observer:
+            observer.close()
         # SIGTERM asks the role helper to restore mode 2. Never SIGKILL it.
         for process in (role, listener):
             if process and process.poll() is None:
@@ -125,13 +134,17 @@ def main():
     role_result = json.loads((out / 'role.json').read_text())
     result = json.loads((out / 'listen.json').read_text())
     keys = ('result', 'received_hex', 'detect_echo_received', 'valid_control_syn_ack', 'control_transfer_captured',
-            'control_messages', 'authentication_succeeded', 'identification_requested', 'identification_accepted', 'error')
+            'control_messages', 'authentication_succeeded', 'identification_requested', 'identification_accepted',
+            'session_start_sent', 'transport_aborted_at_end', 'error')
     print(json.dumps({k: result[k] for k in keys if k in result}, indent=2))
     if not role_result.get('mac_host_mode_restore', {}).get('success') or role_result.get('mode_after') != 2:
         raise RuntimeError('Mac host-role restoration was not verified; inspect role.json')
     print('Mac host role and original USB configuration restored. No firmware changes.')
-    milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted'}[args.stage]
-    return 0 if result.get('result', {}).get('success') and result.get(milestone) and role.returncode == 0 else 3
+    milestone = {'detect': 'detect_echo_received', 'syn': 'valid_control_syn_ack', 'control': 'control_transfer_captured', 'auth': 'identification_requested', 'identify': 'identification_accepted', 'network': 'session_start_sent'}[args.stage]
+    network_ok = observer is None or any(record.get('request') for record in observer.records)
+    if observer:
+        print('Observed requests:', [record.get('request', record.get('error')) for record in observer.records])
+    return 0 if result.get('result', {}).get('success') and result.get(milestone) and role.returncode == 0 and network_ok else 3
 
 
 if __name__ == '__main__':

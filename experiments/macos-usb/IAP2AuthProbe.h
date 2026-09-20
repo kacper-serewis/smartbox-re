@@ -48,18 +48,29 @@ inline Bytes identification() {
     result.insert(result.end(), p.begin(), p.end()); return result;
 }
 
-// Bounded bench exchange, ending at StartIdentification. No general-purpose
-// authentication credentials, device changes, or video-session support.
+// Bounded bench exchange through optional identification and session invitation.
+// No device changes or video-session support; signing uses a local test identity.
 class AuthProbe {
 public:
     using Sign = std::function<Bytes(const Bytes &)>;
-    bool authenticated = false, identificationRequested = false, identificationAccepted = false;
+    bool authenticated = false, identificationRequested = false, identificationAccepted = false, availabilityReceived = false;
     unsigned certificateReplies = 0, challengeReplies = 0;
     std::vector<unsigned> messages;
     std::string error;
     AuthProbe(uint8_t peerSyn, Bytes certificate, Sign sign, bool identify = false)
         : peer(peerSyn), cert(std::move(certificate)), signer(std::move(sign)), identify(identify) {}
     bool done() const { return authenticated && (identify ? identificationAccepted : identificationRequested); }
+    Bytes startSession(const std::string &address, uint16_t port) {
+        if (!identificationAccepted || !port || address.empty() || address.size() > 64) return {};
+        // Wired addresses are a list of nested parameters, not a bare string.
+        Bytes params, addresses; parameter(addresses, 0, text(address.c_str()));
+        parameter(params, 0, addresses);
+        parameter(params, 2, {0,0,uint8_t(port >> 8),uint8_t(port)});
+        parameter(params, 3, text("220.68"));
+        Bytes m{0x40,0x40}; append16(m, 6 + params.size()); append16(m, 0x4301);
+        m.insert(m.end(), params.begin(), params.end());
+        return packet(nextSeq++, peer, m);
+    }
 
     bool feed(const uint8_t *data, size_t size, std::vector<Bytes> &out) {
         if (!error.empty()) return false;
@@ -99,7 +110,6 @@ public:
                 if (!handle(id, body)) return false;
             }
             out.insert(out.end(), lastReplies.begin(), lastReplies.end());
-            if (done()) return true;
         }
         return true;
     }
@@ -138,6 +148,15 @@ private:
             identificationAccepted = true;
         } else if (id == 0x1d03) {
             return fail("Dongle rejected the bench identification");
+        } else if (id == 0x4300 && identificationAccepted) {
+            size_t pos = 0;
+            while (pos < body.size()) {
+                if (body.size() - pos < 4) return fail("Truncated availability parameter");
+                unsigned n = be16(body.data() + pos);
+                if (n < 4 || n > body.size() - pos) return fail("Invalid availability parameter length");
+                pos += n;
+            }
+            availabilityReceived = true;
         } else return fail("Unexpected control message in authentication probe");
         return true;
     }

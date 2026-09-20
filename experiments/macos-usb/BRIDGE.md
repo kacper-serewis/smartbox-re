@@ -174,3 +174,20 @@ completed test. SYN-ACK validation/ACK encoding tests pass with ASan/UBSan.
 The tracked orchestrator also completed end to end in
 `device-snapshots/mac-usb-session-20260920T171500.199329Z`, reproducing `0xAA00`
 and verifying host-mode restoration, the original descriptor, and release-off.
+
+## Authentication and identification extension
+
+The later `--stage auth` and `--stage identify` probes generate a local test
+certificate/key and have received authentication success and identification
+acceptance from this owned HW501. They require no MFi key from the car and make
+no firmware changes. The network stage adds a USB-bound request observer; it
+is still not a video receiver. See the [evidence and protocol limits](../../reports/overlay/mac-auth-analysis/README.md).
+
+```sh
+python3 scripts/mac_usb_session_probe.py --run --stage identify --collect-network
+```
+
+`--collect-network` adds read-only diagnostics over the dongle's Wi-Fi. Omit it
+when that Wi-Fi connection is unavailable. Test keys stay in the local private
+evidence directory. Authentication here only establishes this dongle's behavior;
+it does not establish compatibility with real iPhone authentication.
