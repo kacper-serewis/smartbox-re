@@ -7,8 +7,9 @@ instructions are retained for reference and eventual security restoration.
 
 The current 0.2.0 driver is a reusable configuration bridge. It can publish a
 validated USB description and restore the original, but does not implement
-role switching or CarPlay. Host tests pass; this revision still needs a live
-test. A kernel failure can restart the Mac, so save open work before testing.
+role switching or CarPlay. Host tests and the first live configuration/restore
+and endpoint setup tests passed. A kernel failure can restart the Mac, so save
+open work before further hardware testing.
 See [bridge commands and limits](BRIDGE.md).
 
 ## 1. Recovery preparation

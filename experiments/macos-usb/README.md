@@ -216,3 +216,11 @@ backed up. `kmutil load` returned exit 27 requiring System Settings approval.
 The running instance is still protocol 2, so the new hardware test is pending
 approval/restart. Evidence:
 `device-snapshots/mac-usb-bridge-install-20260920T163536.599407Z`.
+
+After the following reboot, protocol 3 loaded. Six successive configuration/bus
+requests succeeded, including publication of the custom iAP2/NCM profile and
+restoration of the original fields. A non-root Mac process also opened the
+custom interface, configured its class, created both bulk endpoints, committed,
+and closed successfully. The original configuration was restored afterward.
+See [live bridge results](BRIDGE.md#live-result-after-loading-020).
+USB role switching, actual data transfer, and a CarPlay session remain untested.

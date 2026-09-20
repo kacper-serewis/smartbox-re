@@ -33,3 +33,8 @@ role switching or CarPlay compatibility.
 The reference [description helper](https://github.com/shinyquagsire23/macos_usb_gadget_poc/blob/c8349b449a2171c1b5b7c59b882728b130fc6b88/usb_device/alt_IOUSBDeviceControllerLib.c#L330-L333)
 sets the same flag and documents its purpose. Bridge 0.2.0 therefore adds it to
 Republish/Publish/Restore, while Check preserves the old unchanged request.
+
+Live confirmation after the 0.2.0 reboot: Republish returned success, followed
+by successful restoration, custom profile publication, and a second restoration.
+The missing flag was the blocker for the tested unchanged configuration.
+Evidence: `device-snapshots/mac-usb-bridge-20260920T163918.101897Z`.

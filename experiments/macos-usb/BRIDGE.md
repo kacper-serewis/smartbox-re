@@ -88,3 +88,41 @@ test actual kernel concurrency, hardware publication, or a CarPlay session.
 Installation still uses the checksum-pinned installer and macOS approval/reboot.
 No additional security policy changes are required by this revision. See
 [installation and removal](LIVE_TEST.md) for the previously authorized setup.
+
+## Live result after loading 0.2.0
+
+On 20 September 2026, protocol 3 loaded and six successive root requests
+completed successfully without another restart:
+
+1. Republish existing configuration with the replacement flag.
+2. Restore the saved original USB fields (comparison passed).
+3. Publish the generated `SmartBoxIAP2` plus native NCM profile.
+4. Force the device side off-bus.
+5. Release that force-off.
+6. Restore the original USB fields again (comparison passed).
+
+Between steps 3 and 4, a normal non-administrator process successfully opened
+`IOUSBDeviceInterfaceUserClient` for our custom interface, set interface class
+FF/F0/00, created one OUT and one IN bulk pipe, committed the configuration, and
+closed both the interface and user client. The call signatures were checked
+against the installed kernel's method table. No data transfer or USB role-switch
+request was sent; device mode remained disconnected throughout. In particular,
+the force-off/release test does not prove behavior during an active session.
+
+Evidence: `device-snapshots/mac-usb-bridge-20260920T163918.101897Z`.
+The final state has the original NCM interfaces restored, with only the
+`AllowMultipleCreates` controller instruction added. No dongle firmware changed.
+
+The reproducible user-space endpoint probe is:
+
+```sh
+python3 scripts/mac_usb_interface.py
+python3 scripts/mac_usb_interface.py --configure
+```
+
+Default mode only inspects interface properties. `--configure` requires an
+already-published `SmartBoxIAP2` on the exact prepared controller in disconnected
+device mode; it refuses an absent custom interface and never opens the native
+NCM functions. It allocates endpoints, commits, and closes immediately. It does
+not hold a receiver session or exchange iAP2 packets. Restore the configuration
+through the bridge after a publication experiment.

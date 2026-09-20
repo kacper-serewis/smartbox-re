@@ -132,7 +132,7 @@ path ([details](mac-usb-configuration-refusal.md)). The new bridge adds the
 replacement flag, bounded description validation, repeated requests with IDs,
 saved-configuration restoration, and explicit force-off/release controls.
 The normal client is `scripts/mac_usb_bridge.py`; protocol tests and descriptor
-tests passed with ASan/UBSan. The client refuses the currently loaded older
+tests passed with ASan/UBSan. The client refused the then-loaded older
 driver without sending a request. The generated iAP2/NCM profile is a local
 starting point, not a tested head-unit configuration or working receiver.
 
@@ -140,12 +140,34 @@ Version 0.2.0 was installed with both artifact hashes and root:wheel ownership
 verified. The previous exact 0.1.1 bundle is preserved at
 `/Library/Application Support/SmartBoxUSBProbe/0.1.1.kext`; the older backup was
 not changed. The load request returned exit 27, requiring System Settings
-approval. IORegistry still reports protocol 2 (the running 0.1.1 driver).
-Hardware configuration tests for 0.2.0 therefore remain pending approval/reboot.
+approval. IORegistry at that point reported protocol 2 (the running 0.1.1 driver),
+so hardware tests had to wait for approval/reboot.
 Evidence: `device-snapshots/mac-usb-bridge-install-20260920T163536.599407Z`.
 No role switch, custom configuration, dongle firmware, or further Mac security
 policy change occurred during this upgrade. Kernel static analysis completed
 without diagnostics after adding defensive null checks to the type adapters.
+
+## Live reusable bridge and endpoint results
+
+After the next reboot, 0.2.0 (protocol 3) loaded. Live requests 1–6 successfully
+republished, restored, published the custom iAP2/NCM profile, forced off-bus,
+released force-off, and restored again. Both restoration comparisons passed.
+This clears the configuration-permission blocker and demonstrates repeated
+requests in one boot.
+
+A non-root process also opened the custom interface's user client, configured
+FF/F0/00, created OUT/IN bulk pipes (IDs 0/1), committed, and closed successfully.
+The native helper is `experiments/macos-usb/interface_probe.mm`; the reproducible
+runner is `scripts/mac_usb_interface.py`. Method signatures were verified in the
+installed kernel, and the absent-interface guard was tested before publication.
+Evidence: `device-snapshots/mac-usb-bridge-20260920T163918.101897Z`.
+
+These tests did not switch roles, transfer USB data, or establish a CarPlay
+session. The Mac's device side stayed disconnected. The original NCM interfaces
+were restored, and the owned dongle remained enumerated on the host side.
+The next transport milestone is controlled role switching and actual iAP2 data
+exchange, followed by session/network/video negotiation. No additional kernel
+revision was needed for the endpoint test.
 
 ## Proposed Mac-only test path — not implemented
 
