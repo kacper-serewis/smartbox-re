@@ -210,3 +210,9 @@ matching `AllowMultipleCreates` rejection branch; see
 Version 0.2.0 implements the replacement flag and reusable commands described
 in [BRIDGE.md](BRIDGE.md). Successful hardware publication still needs testing
 after that revision loads.
+
+The 0.2.0 bundle is now installed and pinned; the previous 0.1.1 bundle is
+backed up. `kmutil load` returned exit 27 requiring System Settings approval.
+The running instance is still protocol 2, so the new hardware test is pending
+approval/restart. Evidence:
+`device-snapshots/mac-usb-bridge-install-20260920T163536.599407Z`.

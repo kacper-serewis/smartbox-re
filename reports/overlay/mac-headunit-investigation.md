@@ -124,7 +124,7 @@ not expose the rejection reason. Further driver changes should be consolidated
 before installation because the user wants to avoid repeated approval/reboot
 cycles. No additional driver was installed following this test.
 
-## Proposed Mac-only test path — not implemented
+## Reusable native bridge
 
 The native path has since advanced to a prepared reusable 0.2.0 bridge. Offline
 inspection of the installed USB driver found the exact missing-flag refusal
@@ -135,6 +135,19 @@ The normal client is `scripts/mac_usb_bridge.py`; protocol tests and descriptor
 tests passed with ASan/UBSan. The client refuses the currently loaded older
 driver without sending a request. The generated iAP2/NCM profile is a local
 starting point, not a tested head-unit configuration or working receiver.
+
+Version 0.2.0 was installed with both artifact hashes and root:wheel ownership
+verified. The previous exact 0.1.1 bundle is preserved at
+`/Library/Application Support/SmartBoxUSBProbe/0.1.1.kext`; the older backup was
+not changed. The load request returned exit 27, requiring System Settings
+approval. IORegistry still reports protocol 2 (the running 0.1.1 driver).
+Hardware configuration tests for 0.2.0 therefore remain pending approval/reboot.
+Evidence: `device-snapshots/mac-usb-bridge-install-20260920T163536.599407Z`.
+No role switch, custom configuration, dongle firmware, or further Mac security
+policy change occurred during this upgrade. Kernel static analysis completed
+without diagnostics after adding defensive null checks to the type adapters.
+
+## Proposed Mac-only test path — not implemented
 
 A temporary bench hook inside the actual dongle application could supply the
 missing display setup and capture its common outgoing video path over Wi-Fi.
